@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../models/company.dart';
 
-final ValueNotifier<Company?> currentCompany = ValueNotifier<Company?>(null);
-
 class CompanyProvider extends ChangeNotifier {
   static const String _selectedCompanyKey = 'selected_company_id';
   late final Box<Company> _companyBox;
   late final Box<dynamic> _settingsBox;
   bool _isInitialized = false;
-  Company? _currentCompany;
+  final ValueNotifier<Company?> _currentCompanyNotifier = ValueNotifier<Company?>(null);
 
-  Company? get currentCompany => _currentCompany;
+  ValueNotifier<Company?> get currentCompanyNotifier => _currentCompanyNotifier;
+
+  Company? get currentCompany => _currentCompanyNotifier.value;
 
   Future<void> init(Box<Company> companyBox, Box<dynamic> settingsBox) async {
     if (_isInitialized) return;
@@ -35,12 +35,14 @@ class CompanyProvider extends ChangeNotifier {
       if (companyId == null) return;
       
       try {
-        _currentCompany = _companyBox.values.firstWhere(
+        final company = _companyBox.values.firstWhere(
           (c) => c.key.toString() == companyId.toString(),
         );
+        _currentCompanyNotifier.value = company;
         notifyListeners();
       } catch (e) {
-        _currentCompany = null;
+        _currentCompanyNotifier.value = null;
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Error loading selected company: $e');
@@ -49,13 +51,19 @@ class CompanyProvider extends ChangeNotifier {
 
   Future<void> setSelectedCompany(Company company) async {
     await _settingsBox.put(_selectedCompanyKey, company.key);
-    _currentCompany = company;
+    _currentCompanyNotifier.value = company;
     notifyListeners();
   }
 
   Future<void> clearSelectedCompany() async {
     await _settingsBox.delete(_selectedCompanyKey);
-    _currentCompany = null;
+    _currentCompanyNotifier.value = null;
+    notifyListeners();
+  }
+
+  void setCurrentCompany(Company company) {
+    _currentCompanyNotifier.value = company;
+    _settingsBox.put(_selectedCompanyKey, company.key);
     notifyListeners();
   }
 
@@ -70,14 +78,14 @@ class CompanyProvider extends ChangeNotifier {
 
   Future<void> updateCompany(Company company) async {
     await company.save();
-    if (_currentCompany?.key == company.key) {
-      _currentCompany = company;
+    if (_currentCompanyNotifier.value?.key == company.key) {
+      _currentCompanyNotifier.value = company;
       notifyListeners();
     }
   }
 
   Future<void> deleteCompany(Company company) async {
-    if (_currentCompany?.key == company.key) {
+    if (_currentCompanyNotifier.value?.key == company.key) {
       await clearSelectedCompany();
     }
     await company.delete();

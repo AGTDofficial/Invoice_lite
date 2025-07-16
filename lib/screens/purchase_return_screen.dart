@@ -539,7 +539,7 @@ class _AddItemDialogState extends State<_AddItemDialog> {
               
               final item = InvoiceItem(
                 name: _selectedItem!.name,
-                quantity: _quantity,
+                quantity: _quantity.toDouble(),
                 price: _price,
                 taxRate: _taxRate,
                 discount: _discount,

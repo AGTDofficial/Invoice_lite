@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/invoice.dart';
 import '../models/item_model.dart';
+import '../models/company.dart';
 import '../models/item_group.dart';
 import '../providers/company_provider.dart';
 import 'company_selector_screen.dart';
@@ -78,9 +79,11 @@ class _HomeScreenState extends State<HomeScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: ValueListenableBuilder<dynamic>(
-          valueListenable: currentCompany,
+        title: ValueListenableBuilder<Company?>(
+          valueListenable: context.read<CompanyProvider>().currentCompanyNotifier,
           builder: (context, company, _) {
+            // Debug print to check the current company
+            debugPrint('Current Company: ${company?.name ?? 'null'}');
             // Debug print to check the current company
             debugPrint('Current Company: ${company?.toString() ?? 'null'}');
             
@@ -89,13 +92,19 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  company?.name?.isNotEmpty == true ? company.name : 'No Company Selected',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  company?.name ?? 'No Company Selected',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                if (company?.gstin != null)
+                if (company != null && company.gstin.isNotEmpty)
                   Text(
-                    'GSTIN: ${company.gstin}',
-                    style: const TextStyle(fontSize: 12),
+                    company.gstin,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
                   ),
               ],
             );

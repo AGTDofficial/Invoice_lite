@@ -581,7 +581,7 @@ class _AddItemDialogState extends State<_AddItemDialog> {
     final item = InvoiceItem(
       name: _selectedItem!.name,
       hsnCode: _selectedItem!.hsnCode,
-      quantity: quantity.toInt(), // Convert double to int for quantity
+      quantity: quantity,
       unit: _selectedItem!.unit,
       price: price,
       taxRate: taxRate,
@@ -933,19 +933,14 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
         if (item.key != null && item.quantity > 0) {
           final originalItem = itemBox.get(item.key!);
           if (originalItem != null && originalItem.isStockTracked) {
-            // Create stock movement record
-            final stockMovement = StockMovement(
+            // Update stock using the Item's stock update methods
+            originalItem.addStockMovement(StockMovement(
               itemId: originalItem.id,
               quantity: -item.quantity, // Negative for sales
               dateTime: DateTime.now(),
               referenceId: invoice.id,
               type: StockMovementType.sale,
-              balance: originalItem.currentStock - item.quantity,
-            );
-
-            // Update item stock and add movement
-            originalItem.currentStock -= item.quantity;
-            originalItem.stockMovements.add(stockMovement);
+            ));
 
             await itemBox.put(item.key!, originalItem);
           }

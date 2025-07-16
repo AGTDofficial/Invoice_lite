@@ -136,11 +136,11 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
       if (widget.item == null && openingStock > 0) {
         final openingMovement = StockMovement(
           itemId: item.id,
-          quantity: openingStock.toInt(),
+          quantity: openingStock.toDouble(),
           dateTime: DateTime.now(),
           referenceId: 'Opening Stock',
           type: StockMovementType.openingStock,
-          balance: openingStock,
+          balance: openingStock.toDouble(),
         );
         item.addStockMovement(openingMovement);
       }
@@ -150,11 +150,11 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
         if (stockDiff != 0) {
           final stockUpdate = StockMovement(
             itemId: item.id,
-            quantity: stockDiff.toInt(),
+            quantity: stockDiff.toDouble(),
             dateTime: DateTime.now(),
             referenceId: 'Stock Adjustment',
             type: StockMovementType.adjustment,
-            balance: openingStock,
+            balance: openingStock.toDouble(),
           );
           item.addStockMovement(stockUpdate);
         }

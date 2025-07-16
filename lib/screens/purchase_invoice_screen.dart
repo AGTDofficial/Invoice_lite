@@ -746,21 +746,16 @@ class PurchaseInvoiceScreenState extends State<PurchaseInvoiceScreen> {
             itemKey = const Uuid().v4();
           }
           
-          // Update stock and create stock movement
+          // Update stock using the Item's stock update methods
           if (itemToUpdate.isStockTracked && invoiceItem.quantity > 0) {
-            // Create stock movement record
-            final stockMovement = StockMovement(
+            // Create stock movement with the Item's addStockMovement method
+            itemToUpdate.addStockMovement(StockMovement(
               itemId: itemToUpdate.id,
               quantity: invoiceItem.quantity, // Positive for purchases
               dateTime: DateTime.now(),
               referenceId: _invoiceNumberController.text,
               type: StockMovementType.purchase,
-              balance: itemToUpdate.currentStock + invoiceItem.quantity,
-            );
-            
-            // Update item stock and add movement
-            itemToUpdate.currentStock += invoiceItem.quantity;
-            itemToUpdate.stockMovements.add(stockMovement);
+            ));
             
             await itemBox.put(itemKey, itemToUpdate);
             debugPrint('Updated stock for ${invoiceItem.name}: +${invoiceItem.quantity} (New stock: ${itemToUpdate.currentStock})');
@@ -1543,7 +1538,7 @@ class _AddPurchaseItemDialogState extends State<_AddPurchaseItemDialog> {
       final item = InvoiceItem(
         name: _selectedItem!.name,
         hsnCode: _selectedItem!.hsnCode,
-        quantity: int.parse(_quantityController.text),
+        quantity: double.parse(_quantityController.text),
         unit: _selectedItem!.unit,
         price: double.parse(_priceController.text),
         taxRate: taxRate,

@@ -18,7 +18,7 @@ class StockMovementAdapter extends TypeAdapter<StockMovement> {
     };
     return StockMovement(
       itemId: fields[0] as String,
-      quantity: fields[1] as int,
+      quantity: fields[1] as double,
       dateTime: fields[2] as DateTime,
       referenceId: fields[3] as String,
       type: fields[4] as StockMovementType,

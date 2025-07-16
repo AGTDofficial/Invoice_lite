@@ -29,12 +29,12 @@ void registerHiveAdapters() {
   }
 }
 
-final _uuid = const Uuid();
+
 
 @HiveType(typeId: 22)
 class Item extends HiveObject {
   @HiveField(0)
-  late String id;
+  final String id;
 
   @HiveField(1)
   late String name;
@@ -102,7 +102,7 @@ class Item extends HiveObject {
     this.minStockLevel = 0.0,
     this.barcode,
     this.description,
-  }) : id = id ?? _uuid.v4(),
+  }) : id = id ?? const Uuid().v4(),
        name = name;
 
   // Copy with method for easy updates
@@ -144,68 +144,78 @@ class Item extends HiveObject {
   
   // Add stock movement
   void addStockMovement(StockMovement movement) {
-    // Calculate balance based on movement type
-    double newBalance;
-    if (movement.type == StockMovementType.openingStock) {
-      newBalance = movement.quantity.toDouble();
-    } else if (movement.type == StockMovementType.purchase || 
-                movement.type == StockMovementType.returnIn ||
-                movement.type == StockMovementType.productionIn) {
-      newBalance = (currentStock + movement.quantity).toDouble();
-    } else if (movement.type == StockMovementType.sale ||
-                movement.type == StockMovementType.returnOut ||
-                movement.type == StockMovementType.productionOut) {
-      newBalance = (currentStock - movement.quantity).toDouble();
-    } else {
-      newBalance = currentStock;
+    try {
+      // Calculate balance based on movement type
+      double newBalance;
+      if (movement.type == StockMovementType.openingStock) {
+        newBalance = movement.quantity;
+      } else if (movement.type == StockMovementType.purchase || 
+                  movement.type == StockMovementType.returnIn ||
+                  movement.type == StockMovementType.productionIn) {
+        newBalance = currentStock + movement.quantity;
+      } else if (movement.type == StockMovementType.sale ||
+                  movement.type == StockMovementType.returnOut ||
+                  movement.type == StockMovementType.productionOut) {
+        newBalance = currentStock - movement.quantity;
+      } else {
+        newBalance = currentStock;
+      }
+      
+      // Create updated movement with balance
+      final updatedMovement = StockMovement(
+        itemId: movement.itemId,
+        quantity: movement.quantity,
+        dateTime: movement.dateTime,
+        referenceId: movement.referenceId,
+        type: movement.type,
+        balance: newBalance,
+      );
+      
+      // Update stock movements and current stock
+      stockMovements.add(updatedMovement);
+      currentStock = newBalance;
+      lastUpdated = DateTime.now();
+    } catch (e) {
+      print('Error updating stock: $e');
+      throw Exception('Error updating stock: $e');
     }
-    
-    // Create updated movement with balance
-    final updatedMovement = StockMovement(
-      itemId: movement.itemId,
-      quantity: movement.quantity,
-      dateTime: movement.dateTime,
-      referenceId: movement.referenceId,
-      type: movement.type,
-      balance: newBalance,
-    );
-    
-    // Update stock movements and current stock
-    stockMovements.add(updatedMovement);
-    currentStock = newBalance;
-    lastUpdated = DateTime.now();
   }
   
   // Update stock quantity
   void updateStock(double quantity, String reference, StockMovementType type) {
-    if (!isStockTracked) return;
-    
-    // Calculate new balance
-    double newBalance;
-    if (type == StockMovementType.openingStock) {
-      newBalance = quantity;
-    } else if (type == StockMovementType.purchase || 
-                type == StockMovementType.returnIn ||
-                type == StockMovementType.productionIn) {
-      newBalance = (currentStock + quantity).toDouble();
-    } else if (type == StockMovementType.sale ||
-                type == StockMovementType.returnOut ||
-                type == StockMovementType.productionOut) {
-      newBalance = (currentStock - quantity).toDouble();
-    } else {
-      newBalance = currentStock;
+    try {
+      if (!isStockTracked) return;
+      
+      // Calculate new balance
+      double newBalance;
+      if (type == StockMovementType.openingStock) {
+        newBalance = quantity;
+      } else if (type == StockMovementType.purchase || 
+                  type == StockMovementType.returnIn ||
+                  type == StockMovementType.productionIn) {
+        newBalance = currentStock + quantity;
+      } else if (type == StockMovementType.sale ||
+                  type == StockMovementType.returnOut ||
+                  type == StockMovementType.productionOut) {
+        newBalance = currentStock - quantity;
+      } else {
+        newBalance = currentStock;
+      }
+      
+      final movement = StockMovement(
+        itemId: id,
+        quantity: quantity,
+        dateTime: DateTime.now(),
+        referenceId: reference,
+        type: type,
+        balance: newBalance,
+      );
+      
+      addStockMovement(movement);
+    } catch (e) {
+      print('Error updating stock: $e');
+      throw Exception('Error updating stock: $e');
     }
-    
-    final movement = StockMovement(
-      itemId: id,
-      quantity: quantity.toInt(),
-      dateTime: DateTime.now(),
-      referenceId: reference,
-      type: type,
-      balance: newBalance,
-    );
-    
-    addStockMovement(movement);
   }
   
   // Check if stock is low
@@ -288,14 +298,14 @@ class Item extends HiveObject {
       itemGroup: json['itemGroup'] as String?,
       itemCode: json['itemCode'] as String?,
       unit: json['unit'] as String? ?? 'PCS',
-      taxRate: (json['taxRate'] as num?)?.toDouble() ?? 0.0,
+      taxRate: (json['taxRate'] as double?) ?? 0.0,
       hsnCode: json['hsnCode'] as String?,
-      saleRate: (json['saleRate'] as num?)?.toDouble(),
-      purchaseRate: (json['purchaseRate'] as num?)?.toDouble(),
-      openingStock: (json['openingStock'] as num?)?.toDouble() ?? 0.0,
-      currentStock: (json['currentStock'] as num?)?.toDouble() ?? 0.0,
+      saleRate: (json['saleRate'] as double?),
+      purchaseRate: (json['purchaseRate'] as double?),
+      openingStock: (json['openingStock'] as double?) ?? 0.0,
+      currentStock: (json['currentStock'] as double?) ?? 0.0,
       isStockTracked: json['isStockTracked'] as bool? ?? false,
-      minStockLevel: (json['minStockLevel'] as num?)?.toDouble() ?? 0.0,
+      minStockLevel: (json['minStockLevel'] as double?) ?? 0.0,
       barcode: json['barcode'] as String?,
       description: json['description'] as String?,
     );

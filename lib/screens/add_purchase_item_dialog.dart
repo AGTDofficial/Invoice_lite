@@ -209,7 +209,7 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
   
   void _saveItem() {
     if (_formKey.currentState!.validate() && _selectedItem != null) {
-      final quantity = int.tryParse(_quantityController.text) ?? 1;
+      final quantity = double.tryParse(_quantityController.text) ?? 1.0;
       final price = double.tryParse(_priceController.text) ?? 0.0;
       
       final invoiceItem = InvoiceItem(

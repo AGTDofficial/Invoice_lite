@@ -774,7 +774,7 @@ class _AddReturnItemDialogState extends State<_AddReturnItemDialog> {
     
     final returnItem = InvoiceItem(
       name: _getItemName(_selectedItem),
-      quantity: quantity,
+      quantity: quantity.toDouble(),
       unit: _selectedItem?.unit ?? 'pcs', // Default to 'pcs' if unit is not available
       price: double.parse(_priceController.text),
       taxRate: double.parse(_taxRateController.text),

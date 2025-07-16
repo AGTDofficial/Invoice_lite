@@ -15,11 +15,11 @@ class StockMovementAdapter extends TypeAdapter<StockMovement> {
     }
     return StockMovement(
       itemId: fields[0] as String,
-      quantity: fields[1] as int,
+      quantity: fields[1] as double,
       dateTime: fields[2] as DateTime,
       referenceId: fields[3] as String,
       type: StockMovementType.values[fields[4] as int],
-      balance: fields[5] as double,
+      balance: fields[5] as double?,
     );
   }
 
@@ -28,7 +28,7 @@ class StockMovementAdapter extends TypeAdapter<StockMovement> {
     writer
       ..writeByte(6)
       ..writeByte(0)
-      ..write(obj.itemId)
+      ..write(obj.itemId.toString())
       ..writeByte(1)
       ..write(obj.quantity)
       ..writeByte(2)

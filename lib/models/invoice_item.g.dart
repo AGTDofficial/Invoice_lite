@@ -19,7 +19,7 @@ class InvoiceItemAdapter extends TypeAdapter<InvoiceItem> {
     return InvoiceItem(
       name: fields[0] as String,
       hsnCode: fields[1] as String?,
-      quantity: fields[2] as int,
+      quantity: fields[2] as double,
       unit: fields[3] as String,
       price: fields[4] as double,
       taxRate: fields[5] as double,

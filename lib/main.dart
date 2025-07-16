@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:invoice_app/enums/invoice_type.dart';
@@ -25,18 +25,7 @@ Box<AccountGroup>? groupsBox;
 // Global navigator key
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-Future<void> _clearHiveData() async {
-  try {
-    final appDir = await path_provider.getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${appDir.path}/hive');
-    if (await hiveDir.exists()) {
-      await hiveDir.delete(recursive: true);
-      debugPrint('✅ Deleted existing Hive data directory');
-    }
-  } catch (e) {
-    debugPrint('❌ Error clearing Hive data: $e');
-  }
-}
+
 
 Future<Map<String, Box>> _openHiveBoxes() async {
   final boxes = <String, Box>{};
@@ -137,31 +126,11 @@ Future<void> _initializeApp() async {
   debugPrint('🚀 Starting app initialization...');
   
   try {
-    // Clear existing Hive data for a clean start
-    await _clearHiveData();
-    
-    // Get application documents directory
     final appDocumentDir = await path_provider.getApplicationDocumentsDirectory();
     debugPrint('📁 App documents directory: ${appDocumentDir.path}');
     
-    // Initialize Hive with a fresh instance
-    await Hive.close();
-    await Future.delayed(Duration(milliseconds: 500)); // Ensure Hive is fully closed
-    
-    // Clear the Hive directory to ensure clean state
-    final hiveDir = Directory('${appDocumentDir.path}/hive');
-    if (await hiveDir.exists()) {
-      await hiveDir.delete(recursive: true);
-      debugPrint('🧹 Deleted existing Hive directory');
-      await Future.delayed(Duration(milliseconds: 500)); // Ensure directory is deleted
-    }
-    
-    // Recreate the Hive directory
-    await hiveDir.create(recursive: true);
-    
-    // Initialize Hive with a fresh instance
+    // Initialize Hive properly
     await Hive.initFlutter(appDocumentDir.path);
-    debugPrint('✅ Hive initialized');
     
     // Register adapters
     await _registerHiveAdapters();
@@ -171,18 +140,13 @@ Future<void> _initializeApp() async {
     final boxes = await _openHiveBoxes();
     
     // Get boxes with proper type inference
-    final accountGroupsBox = boxes['accountgroups'] as Box<AccountGroup>?;
-    final companiesBox = boxes['companies'] as Box<Company>?;
-    final settingsBox = boxes['settings'];
+    final accountGroupsBox = boxes['accountgroups'] as Box<AccountGroup>;
+    final companiesBox = boxes['companies'] as Box<Company>;
+    final settingsBox = boxes['settings'] as Box<dynamic>;
     
     // Initialize global box references
     accountsBox = boxes['accounts'] as Box<Account>;
-    groupsBox = accountGroupsBox; // Assign to global variable
-    
-    // Verify all required boxes were opened successfully
-    if (accountsBox == null || groupsBox == null || companiesBox == null || settingsBox == null) {
-      throw Exception('Failed to initialize one or more Hive boxes');
-    }
+    groupsBox = accountGroupsBox;
     
     // Initialize providers
     final companyProvider = CompanyProvider();
@@ -192,20 +156,16 @@ Future<void> _initializeApp() async {
     await accountProvider.init();
     
     // Add default account groups if empty
-    if (groupsBox != null && groupsBox!.isEmpty) {
+    if (groupsBox!.isNotEmpty) {
       await _addDefaultAccountGroups();
     }
     
     // Add a default company if none exists
-    if (companiesBox.isEmpty) {
+    if (companiesBox.isNotEmpty) {
       await _addDefaultCompany(companiesBox);
+      companyProvider.setCurrentCompany(companiesBox.getAt(0)!);
+      debugPrint('✅ Set default company as current');
     }
-    
-    debugPrint('\n🎉 App initialization complete! Running main app...');
-    
-    // Get the boxes
-    final itemsBox = boxes['itemsBox'] as Box<Item>;
-    final itemGroupsBox = boxes['itemGroups'] as Box<ItemGroup>;
     
     // Run the main app
     runApp(
@@ -216,8 +176,8 @@ Future<void> _initializeApp() async {
         ],
         child: MyApp(
           navigatorKey: navigatorKey, 
-          itemsBox: itemsBox,
-          itemGroupsBox: itemGroupsBox,
+          itemsBox: boxes['itemsBox'] as Box<Item>,
+          itemGroupsBox: boxes['itemGroups'] as Box<ItemGroup>,
         ),
       ),
     );

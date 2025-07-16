@@ -11,7 +11,7 @@ class InvoiceItem extends HiveObject {
   String? hsnCode;
 
   @HiveField(2)
-  int quantity;
+  double quantity;
 
   @HiveField(3)
   String unit;
@@ -74,7 +74,7 @@ class InvoiceItem extends HiveObject {
   InvoiceItem copyWith({
     String? name,
     String? hsnCode,
-    int? quantity,
+    double? quantity,
     String? unit,
     double? price,
     double? taxRate,
@@ -91,7 +91,7 @@ class InvoiceItem extends HiveObject {
     return InvoiceItem(
       name: name ?? this.name,
       hsnCode: hsnCode ?? this.hsnCode,
-      quantity: quantity ?? this.quantity,
+      quantity: quantity ?? this.quantity.toDouble(),
       unit: unit ?? this.unit,
       price: price ?? this.price,
       taxRate: taxRate ?? this.taxRate,

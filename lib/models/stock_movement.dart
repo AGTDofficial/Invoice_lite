@@ -9,7 +9,7 @@ class StockMovement extends HiveObject {
   final String itemId;
 
   @HiveField(1)
-  final int quantity;
+  final double quantity;
 
   @HiveField(2)
   final DateTime dateTime;
@@ -21,7 +21,7 @@ class StockMovement extends HiveObject {
   final StockMovementType type;
 
   @HiveField(5)
-  final double? balance; // Stock balance after this movement
+  double? balance; // Stock balance after this movement
 
   StockMovement({
     required this.itemId,
