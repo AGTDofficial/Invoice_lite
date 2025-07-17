@@ -22,6 +22,9 @@ class StockMovement extends HiveObject {
 
   @HiveField(5)
   double? balance; // Stock balance after this movement
+  
+  @HiveField(6)
+  String? narration; // Optional description of the movement
 
   StockMovement({
     required this.itemId,
@@ -30,5 +33,6 @@ class StockMovement extends HiveObject {
     required this.referenceId,
     required this.type,
     this.balance,
+    this.narration,
   });
 }

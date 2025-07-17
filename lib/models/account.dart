@@ -2,14 +2,6 @@ import 'package:hive/hive.dart';
 
 part 'account.g.dart';
 
-enum DealerType {
-  registered,
-  unregistered,
-  composition,
-  govtBody,
-  uinHolder,
-}
-
 @HiveType(typeId: 4)
 class Account extends HiveObject {
   @HiveField(0)
@@ -36,40 +28,52 @@ class Account extends HiveObject {
   @HiveField(7, defaultValue: '')
   String? state;
   
-  @HiveField(8)
-  String? dealerType;
-  
-  @HiveField(9, defaultValue: '')
+  @HiveField(8, defaultValue: '')
   String? gstinUin;
   
-  @HiveField(10, defaultValue: '')
+  @HiveField(9, defaultValue: '')
   String? email;
   
-  @HiveField(11, defaultValue: true)
+  @HiveField(10, defaultValue: true)
   bool isActive;
   
+  @HiveField(11, defaultValue: 0)
+  double creditLimit;
+  
   @HiveField(12, defaultValue: 0)
+  int creditDays;
+  
+  @HiveField(13, defaultValue: 0)
+  double creditAmount;
+  
+  @HiveField(14, defaultValue: '')
+  String? panNumber;
+  
+  @HiveField(15, defaultValue: 0)
   int colorValue;
   
-  @HiveField(13, defaultValue: false)
+  @HiveField(16, defaultValue: false)
   bool isCustomer;
   
-  @HiveField(14, defaultValue: false)
+  @HiveField(17, defaultValue: false)
   bool isSupplier;
 
   Account({
     required this.name,
-    this.phone = '',
+    required this.phone,
     this.openingBalance = 0.0,
-    this.isCredit = false,
+    this.isCredit = true,
     this.group = 'Sundry Debtor',
-    this.address,
-    this.country,
-    this.state,
-    this.dealerType,
-    this.gstinUin,
-    this.email,
+    this.address = '',
+    this.country = '',
+    this.state = '',
+    this.gstinUin = '',
+    this.email = '',
     this.isActive = true,
+    this.creditLimit = 0,
+    this.creditDays = 0,
+    this.creditAmount = 0,
+    this.panNumber = '',
     this.colorValue = 0,
     this.isCustomer = false,
     this.isSupplier = false,
@@ -85,10 +89,13 @@ class Account extends HiveObject {
     String? address,
     String? country,
     String? state,
-    String? dealerType,
     String? gstinUin,
     String? email,
     bool? isActive,
+    double? creditLimit,
+    int? creditDays,
+    double? creditAmount,
+    String? panNumber,
     int? colorValue,
     bool? isCustomer,
     bool? isSupplier,
@@ -102,10 +109,13 @@ class Account extends HiveObject {
       address: address ?? this.address,
       country: country ?? this.country,
       state: state ?? this.state,
-      dealerType: dealerType ?? this.dealerType,
       gstinUin: gstinUin ?? this.gstinUin,
       email: email ?? this.email,
       isActive: isActive ?? this.isActive,
+      creditLimit: creditLimit ?? this.creditLimit,
+      creditDays: creditDays ?? this.creditDays,
+      creditAmount: creditAmount ?? this.creditAmount,
+      panNumber: panNumber ?? this.panNumber,
       colorValue: colorValue ?? this.colorValue,
       isCustomer: isCustomer ?? this.isCustomer,
       isSupplier: isSupplier ?? this.isSupplier,

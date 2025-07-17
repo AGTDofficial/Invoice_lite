@@ -18,58 +18,38 @@ class InvoiceItemAdapter extends TypeAdapter<InvoiceItem> {
     };
     return InvoiceItem(
       name: fields[0] as String,
-      hsnCode: fields[1] as String?,
-      quantity: fields[2] as double,
-      unit: fields[3] as String,
-      price: fields[4] as double,
-      taxRate: fields[5] as double,
-      taxType: fields[6] as String,
-      discount: fields[7] as double,
-      isFreeItem: fields[14] as bool,
-      isTaxInclusive: fields[11] as bool,
-      cgst: fields[8] as double,
-      sgst: fields[9] as double,
-      igst: fields[10] as double,
-      returnReason: fields[12] as String?,
-      originalInvoiceItemId: fields[13] as String?,
-    )..originalItemKey = fields[15] as String?;
+      quantity: fields[1] as double,
+      unit: fields[2] as String,
+      price: fields[3] as double,
+      discount: fields[4] as double,
+      returnReason: fields[5] as String?,
+      originalInvoiceItemId: fields[6] as String?,
+      isFreeItem: fields[7] as bool,
+      originalItemKey: fields[8] as String?,
+    );
   }
 
   @override
   void write(BinaryWriter writer, InvoiceItem obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.hsnCode)
-      ..writeByte(2)
       ..write(obj.quantity)
-      ..writeByte(3)
+      ..writeByte(2)
       ..write(obj.unit)
-      ..writeByte(4)
+      ..writeByte(3)
       ..write(obj.price)
-      ..writeByte(5)
-      ..write(obj.taxRate)
-      ..writeByte(6)
-      ..write(obj.taxType)
-      ..writeByte(7)
+      ..writeByte(4)
       ..write(obj.discount)
-      ..writeByte(8)
-      ..write(obj.cgst)
-      ..writeByte(9)
-      ..write(obj.sgst)
-      ..writeByte(10)
-      ..write(obj.igst)
-      ..writeByte(11)
-      ..write(obj.isTaxInclusive)
-      ..writeByte(12)
+      ..writeByte(5)
       ..write(obj.returnReason)
-      ..writeByte(13)
+      ..writeByte(6)
       ..write(obj.originalInvoiceItemId)
-      ..writeByte(14)
+      ..writeByte(7)
       ..write(obj.isFreeItem)
-      ..writeByte(15)
+      ..writeByte(8)
       ..write(obj.originalItemKey);
   }
 

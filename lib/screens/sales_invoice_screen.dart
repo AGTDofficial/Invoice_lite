@@ -1,16 +1,12 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter/rendering.dart';
 import 'package:uuid/uuid.dart';
 import '../models/item_model.dart';
 import '../models/invoice_item.dart';
 import '../models/invoice.dart';
 import '../models/account.dart';
 import '../enums/invoice_type.dart';
-import '../services/item_service.dart';
-import '../constants/app_constants.dart';
 import '../models/stock_movement.dart';
 import '../enums/stock_movement_type.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +26,8 @@ class _AddItemDialog extends StatefulWidget {
   final List<Item> allItems;
   final Function() loadMoreItems;
   final Function(String) onSearchChanged;
+  final InvoiceItem? initialItem;
+  final Item? selectedItem;
   
   const _AddItemDialog({
     required this.items,
@@ -38,6 +36,8 @@ class _AddItemDialog extends StatefulWidget {
     required this.allItems,
     required this.loadMoreItems,
     required this.onSearchChanged,
+    this.initialItem,
+    this.selectedItem,
   });
   
   @override
@@ -46,77 +46,75 @@ class _AddItemDialog extends StatefulWidget {
 
 class _AddItemDialogState extends State<_AddItemDialog> {
   Item? _selectedItem;
-  final _quantityController = TextEditingController(text: '1.0');
-  final _priceController = TextEditingController();
-  final _discountController = TextEditingController(text: '0.00');
-  final _taxRateController = TextEditingController();
-  final _searchController = TextEditingController();
-  List<Item> _filteredItems = [];
-  bool _isFreeItem = false;
+  final TextEditingController _quantityController = TextEditingController(text: '1.0');
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _discountController = TextEditingController(text: '0.00');
+  final _itemSearchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _quantityFocusNode = FocusNode();
+  final FocusNode _priceFocusNode = FocusNode();
+  final FocusNode _discountFocusNode = FocusNode();
+
   bool _isManualPrice = false;
-  String _selectedTaxType = 'GST'; // GST, IGST, Exempt, Tax Incl.
-  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
-    _filteredItems = List.from(widget.items);
-    _taxRateController.text = '18.0'; // Default tax rate
+    _searchFocusNode.addListener(() {
+      if (!_searchFocusNode.hasFocus && _selectedItem == null) {
+        _itemSearchController.clear();
+        widget.onSearchChanged('');
+      }
+    });
+    
+    // If editing an existing item, initialize with its values
+    if (widget.initialItem != null) {
+      _selectedItem = widget.allItems.firstWhere(
+        (item) => item.name == widget.initialItem!.name,
+        orElse: () => widget.items.isNotEmpty ? widget.items.first : Item(name: '', unit: 'pcs'),
+      );
+      _itemSearchController.text = _selectedItem?.name ?? '';
+      _quantityController.text = widget.initialItem!.quantity.toString();
+      _priceController.text = widget.initialItem!.price.toStringAsFixed(2);
+      _discountController.text = widget.initialItem!.discount.toStringAsFixed(2);
+      _isManualPrice = true; // Allow editing the price by default when editing
+    } 
+    // If a selected item is provided, use it
+    else if (widget.selectedItem != null) {
+      _selectedItem = widget.selectedItem;
+      _itemSearchController.text = _selectedItem?.name ?? '';
+      _priceController.text = _selectedItem!.saleRate?.toStringAsFixed(2) ?? '0.00';
+      _quantityController.text = '1'; // Default quantity for new selection
+    }
+    // Otherwise use the first item in the list if available
+    else if (widget.items.isNotEmpty) {
+      _selectedItem = widget.items.first;
+      _itemSearchController.text = _selectedItem?.name ?? '';
+      _priceController.text = _selectedItem!.saleRate?.toStringAsFixed(2) ?? '0.00';
+    }
   }
 
   @override
   void dispose() {
+    _itemSearchController.dispose();
     _quantityController.dispose();
     _priceController.dispose();
     _discountController.dispose();
-    _taxRateController.dispose();
-    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _quantityFocusNode.dispose();
+    _priceFocusNode.dispose();
+    _discountFocusNode.dispose();
     super.dispose();
-  }
-
-  void _filterItems(String query) {
-    setState(() {
-      _isSearching = query.isNotEmpty;
-      if (query.isEmpty) {
-        _filteredItems = List<Item>.from(widget.items);
-      } else {
-        final queryLower = query.toLowerCase();
-        _filteredItems = widget.items.where((item) {
-          return item.name.toLowerCase().contains(queryLower) ||
-              (item.hsnCode?.toLowerCase().contains(queryLower) ?? false) ||
-              (item.itemCode?.toLowerCase().contains(queryLower) ?? false);
-        }).toList();
-      }
-    });
   }
   
   void _updatePrice() {
-    if (_selectedItem != null && !_isManualPrice && !_isFreeItem) {
+    if (_selectedItem != null && !_isManualPrice) {
       setState(() {
         _priceController.text = _selectedItem!.saleRate?.toStringAsFixed(2) ?? '0.00';
       });
-    } else if (_isFreeItem) {
-      setState(() {
-        _priceController.text = '0.00';
-      });
     }
   }
-  
-  void _updateTaxRate() {
-    if (_selectedItem != null) {
-      setState(() {
-        _taxRateController.text = _selectedItem!.taxRate.toStringAsFixed(2);
-        // Default to GST since Item doesn't have taxType
-        _selectedTaxType = 'GST';
-      });
-    } else {
-      setState(() {
-        _taxRateController.text = '0.00';
-        _selectedTaxType = 'GST';
-      });
-    }
-  }
-  
+
   double _calculateSubtotal() {
     final quantity = double.tryParse(_quantityController.text) ?? 0;
     final price = double.tryParse(_priceController.text) ?? 0;
@@ -124,296 +122,131 @@ class _AddItemDialogState extends State<_AddItemDialog> {
     return (quantity * price) - discount;
   }
   
-  double _calculateTax() {
-    final subtotal = _calculateSubtotal();
-    final taxRate = double.tryParse(_taxRateController.text) ?? 0;
-    
-    if (_selectedTaxType == 'Exempt') {
-      return 0.0;
-    } else if (_selectedTaxType == 'Tax Incl.') {
-      // For tax-inclusive pricing, we need to back-calculate the tax
-      final taxAmount = subtotal - (subtotal / (1 + (taxRate / 100)));
-      return taxAmount;
-    } else {
-      // Regular GST/IGST calculation
-      return (subtotal * taxRate) / 100;
-    }
-  }
-  
   double _calculateTotal() {
-    if (_selectedTaxType == 'Tax Incl.') {
-      // For tax-inclusive pricing, the total is just the subtotal
-      return _calculateSubtotal();
-    } else {
-      // For regular pricing, add tax to subtotal
-      return _calculateSubtotal() + _calculateTax();
-    }
+    return _calculateSubtotal();
   }
   
   @override
   Widget build(BuildContext context) {
-    // Ensure filtered items are up to date with current search
-    if (!_isSearching) {
-      _filteredItems = List<Item>.from(widget.items);
-    }
-    
     return AlertDialog(
       title: const Text('Add Item to Sale'),
       content: SizedBox(
         width: double.maxFinite,
-        height: MediaQuery.of(context).size.height * 0.7, // 70% of screen height
+        height: MediaQuery.of(context).size.height * 0.7,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Search Items',
-                hintText: 'Search by name, HSN, or code',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _filterItems('');
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: _filterItems,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: _filteredItems.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.search_off, size: 48, color: Colors.grey),
-                          const SizedBox(height: 8),
-                          Text(
-                            _isSearching 
-                                ? 'No items match your search'
-                                : 'No items available',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (!_isSearching) ...[
-                            const SizedBox(height: 8),
-                            const Text('Add items from the Items section first'),
-                          ],
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = _filteredItems[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-                          elevation: 0,
-                          child: ListTile(
-                            title: Text(
-                              item.name,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (item.hsnCode?.isNotEmpty ?? false)
-                                  Text('HSN: ${item.hsnCode}'),
-                                if (item.itemCode?.isNotEmpty ?? false)
-                                  Text('Code: ${item.itemCode}'),
-                                Text('Stock: ${item.currentStock} ${item.unit}'),
-                              ],
-                            ),
-                            trailing: Text(
-                              '₹${item.saleRate?.toStringAsFixed(2) ?? '0.00'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _selectedItem = item;
-                                _selectedTaxType = 'GST';
-                                _updatePrice();
-                                _updateTaxRate();
-                              });
-                            },
-                            tileColor: _selectedItem == item
-                                ? Theme.of(context).primaryColor.withOpacity(0.1)
-                                : null,
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            const SizedBox(height: 16),
-            // Quantity Field
-            TextField(
-              controller: _quantityController,
-              decoration: InputDecoration(
-                labelText: 'Quantity',
-                border: const OutlineInputBorder(),
-                suffixText: _selectedItem?.unit ?? 'pcs',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (value) {
-                final qty = double.tryParse(value) ?? 0;
-                if (qty > (_selectedItem?.currentStock ?? 0)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Only ${_selectedItem?.currentStock ?? 0} ${_selectedItem?.unit ?? ''} available'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            
-            // Price Row with Toggle
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _priceController,
-                    decoration: InputDecoration(
-                      labelText: 'Selling Price (₹)',
-                      border: const OutlineInputBorder(),
-                      enabled: !_isFreeItem,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: _isFreeItem ? const TextStyle(color: Colors.grey) : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: _isManualPrice ? 'Autofill Price' : 'Edit Price Manually',
-                  child: IconButton(
-                    icon: Icon(_isManualPrice ? Icons.auto_awesome : Icons.edit),
-                    onPressed: () {
-                      setState(() {
-                        _isManualPrice = !_isManualPrice;
-                        _updatePrice();
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Tax Type Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedTaxType,
-              decoration: const InputDecoration(
-                labelText: 'Tax Type',
-                border: OutlineInputBorder(),
-              ),
-              items: AppConstants.taxTypes.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedTaxType = value;
-                    if (value == 'Exempt') {
-                      _taxRateController.text = '0';
-                    } else if (value == 'Tax Incl.') {
-                      // Keep current tax rate but show it's inclusive
-                    }
-                    _updateTaxRate();
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            
-            // Tax Rate Field (only show if not exempt)
-            if (_selectedTaxType != 'Exempt')
+              _buildItemSearchField(),
+              const SizedBox(height: 16),
+              
+              // Quantity Field
               TextField(
-                controller: _taxRateController,
+                controller: _quantityController,
+                focusNode: _quantityFocusNode,
                 decoration: InputDecoration(
-                  labelText: _selectedTaxType == 'Tax Incl.' ? 'Included Tax Rate (%)' : 'Tax Rate (%)',
+                  labelText: 'Quantity',
                   border: const OutlineInputBorder(),
-                  suffixText: '%',
+                  suffixText: _selectedItem?.unit ?? 'pcs',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (value) {
-                  final rate = double.tryParse(value) ?? 0;
-                  if (rate < 0 || rate > 100) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Tax rate must be between 0 and 100'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                  setState(() {}); // Update the UI
-                },
+                textInputAction: TextInputAction.next,
+                onChanged: (_) => _updatePrice(),
+                onSubmitted: (_) => FocusScope.of(context).requestFocus(_priceFocusNode),
               ),
-            const SizedBox(height: 12),
-            
-            // Discount Field
-            TextField(
-              controller: _discountController,
-              decoration: const InputDecoration(
-                labelText: 'Discount (₹)',
-                border: OutlineInputBorder(),
-                prefixText: '-₹',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 8),
-            
-            // Free Item Toggle
-            CheckboxListTile(
-              title: const Text('Mark as Free Item'),
-              value: _isFreeItem,
-              onChanged: (bool? value) {
-                setState(() {
-                  _isFreeItem = value ?? false;
-                  _updatePrice();
-                });
-              },
-              secondary: const Icon(Icons.money_off, color: Colors.green),
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
-            
-            // Summary Card
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  children: [
-                    _buildSummaryRow('Subtotal', '₹${_calculateSubtotal().toStringAsFixed(2)}'),
-                    if (_selectedTaxType != 'Exempt')
-                      _buildSummaryRow(
-                        '${_selectedTaxType == 'Tax Incl.' ? 'Included ' : ''}Tax (${_taxRateController.text}%)', 
-                        '₹${_calculateTax().toStringAsFixed(2)}',
+              const SizedBox(height: 12),
+              
+              // Price Field with Lock Toggle
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _priceController,
+                      focusNode: _priceFocusNode,
+                      readOnly: !_isManualPrice,
+                      decoration: InputDecoration(
+                        labelText: 'Price',
+                        border: const OutlineInputBorder(),
+                        prefixText: '₹ ',
+                        suffixIcon: IconButton(
+                          icon: Icon(_isManualPrice ? Icons.lock_open : Icons.lock_outline),
+                          tooltip: _isManualPrice ? 'Lock price' : 'Unlock to edit',
+                          onPressed: () {
+                            setState(() {
+                              _isManualPrice = !_isManualPrice;
+                              if (!_isManualPrice && _selectedItem != null) {
+                                // Revert to item's default price when locking
+                                _priceController.text = _selectedItem!.saleRate?.toStringAsFixed(2) ?? '0.00';
+                              }
+                            });
+                          },
+                        ),
+                        filled: !_isManualPrice,
+                        fillColor: !_isManualPrice ? Colors.grey[100] : null,
+                        hintText: !_isManualPrice ? 'Tap the lock to edit' : null,
                       ),
-                    if (_selectedTaxType == 'Tax Incl.')
-                      _buildSummaryRow('Taxable Amount', '₹${(_calculateSubtotal() - _calculateTax()).toStringAsFixed(2)}'),
-                    const Divider(),
-                    _buildSummaryRow(
-                      'Total',
-                      '₹${_calculateTotal().toStringAsFixed(2)}',
-                      isBold: true,
+                      style: !_isManualPrice 
+                          ? TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w500)
+                          : null,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => _updatePrice(),
+                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_discountFocusNode),
+                      onTap: () {
+                        if (!_isManualPrice) {
+                          // Auto-unlock when tapping on the field
+                          setState(() {
+                            _isManualPrice = true;
+                          });
+                        }
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            )
+              const SizedBox(height: 12),
+              
+              // Discount Field
+              TextField(
+                controller: _discountController,
+                focusNode: _discountFocusNode,
+                decoration: const InputDecoration(
+                  labelText: 'Discount',
+                  border: OutlineInputBorder(),
+                  prefixText: '₹ ',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                onChanged: (_) => _updatePrice(),
+                onSubmitted: (_) => _submitForm(),
+              ),
+              const SizedBox(height: 16),
+              
+              // Summary Card
+              Card(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    children: [
+                      _buildSummaryRow('Subtotal', _calculateSubtotal()),
+                      const SizedBox(height: 4),
+                      _buildSummaryRow(
+                        'Discount',
+                        (double.tryParse(_discountController.text) ?? 0) * -1,
+                        textColor: Colors.red,
+                      ),
+                      const Divider(),
+                      _buildSummaryRow(
+                        'Total',
+                        _calculateTotal(),
+                        isBold: true,
+                      ),
+                    ],
+                  ),
+                ),
+              )
             ],
           ),
         ),
@@ -424,183 +257,192 @@ class _AddItemDialogState extends State<_AddItemDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _saveItem,
+          onPressed: _submitForm,
           child: const Text('Add'),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                widget.onSearchChanged(value);
-              },
-              decoration: InputDecoration(
-                labelText: 'Search items',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
-                suffixIcon: widget.searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          widget.onSearchChanged('');
-                        },
-                      )
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Removed Add Item button and loading indicator as they're not needed in this dialog
-          ],
         ),
       ],
     );
   }
   
-  // Helper method to build summary rows
-  Widget _buildSummaryRow(String label, String value, {bool isBold = false}) {
+  Widget _buildItemSearchField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _itemSearchController,
+          focusNode: _searchFocusNode,
+          textInputAction: TextInputAction.next,
+          autofocus: true,
+          onChanged: (value) {
+            widget.onSearchChanged(value);
+            setState(() {
+              // Clear selection when search text changes
+              if (value.isEmpty) {
+                _selectedItem = null;
+              }
+            });
+          },
+          onTap: () {
+            // Show dropdown when field is tapped
+            if (_itemSearchController.text.isEmpty) {
+              widget.onSearchChanged('');
+            }
+          },
+          decoration: InputDecoration(
+            labelText: 'Item',
+            hintText: 'Search by name or code',
+            border: const OutlineInputBorder(),
+            suffixIcon: _itemSearchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      _itemSearchController.clear();
+                      setState(() {
+                        _selectedItem = null;
+                        widget.onSearchChanged('');
+                      });
+                    },
+                  )
+                : null,
+          ),
+        ),
+        // Show dropdown only when there's a search query and no item is selected
+        if (_itemSearchController.text.isNotEmpty && widget.items.isNotEmpty && _selectedItem == null)
+          Card(
+            elevation: 4.0,
+            margin: const EdgeInsets.only(top: 4.0),
+            child: SizedBox(
+              height: 200,
+              child: _buildItemList(),
+            ),
+          ),
+      ],
+    );
+  }
+  
+  Widget _buildItemList() {
+    final filteredItems = widget.items.where((item) {
+      final searchText = _itemSearchController.text.toLowerCase();
+      final itemName = item.name.toLowerCase();
+      final itemCode = item.itemCode?.toLowerCase() ?? '';
+      return itemName.contains(searchText) || 
+             itemCode.contains(searchText);
+    }).toList();
+
+    if (filteredItems.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('No items found'),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      shrinkWrap: true,
+      itemCount: filteredItems.length,
+      itemBuilder: (context, index) {
+        final item = filteredItems[index];
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                _selectedItem = item;
+                _itemSearchController.text = item.name;
+                if (!_isManualPrice) {
+                  _priceController.text = item.saleRate?.toStringAsFixed(2) ?? '0.00';
+                }
+                widget.onSearchChanged('');
+              });
+              FocusScope.of(context).requestFocus(_quantityFocusNode);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.itemCode ?? 'No Code'} • ${item.unit} • ₹${item.saleRate?.toStringAsFixed(2) ?? '0.00'}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (index < filteredItems.length - 1)
+                    const Divider(height: 20, thickness: 0.5),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitForm() {
+    if (_selectedItem != null) {
+      final quantity = double.tryParse(_quantityController.text) ?? 0;
+      final price = double.tryParse(_priceController.text) ?? 0;
+      final discount = double.tryParse(_discountController.text) ?? 0;
+
+      final item = InvoiceItem(
+        name: _selectedItem!.name,
+        quantity: quantity,
+        unit: _selectedItem!.unit,
+        price: price,
+        discount: discount,
+      );
+      
+      // Return both the item and whether it's an edit
+      Navigator.pop(context, {
+        'item': item,
+        'isEdit': widget.initialItem != null,
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an item'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildSummaryRow(String label, double amount, {bool isBold = false, Color? textColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: isBold ? const TextStyle(fontWeight: FontWeight.bold) : null),
-          Text(value, style: isBold ? const TextStyle(fontWeight: FontWeight.bold) : null),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+              color: textColor,
+            ),
+          ),
+          Text(
+            '₹${amount.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+              color: textColor,
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  void _saveItem() {
-    if (_selectedItem == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an item')),
-      );
-      return;
-    }
-    
-    // Validate quantity
-    final quantity = double.tryParse(_quantityController.text) ?? 0;
-    if (quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Quantity must be greater than 0')),
-      );
-      return;
-    }
-    
-    // Check stock availability
-    if (_selectedItem!.isStockTracked && !_selectedItem!.hasSufficientStock(quantity)) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Insufficient Stock'),
-          content: Text(
-            'Only ${_selectedItem!.currentStock} ${_selectedItem!.unit} of ${_selectedItem!.name} available.\n\n'
-            'Do you want to proceed with the available quantity?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _createAndReturnItem(quantity);
-              },
-              child: const Text('Proceed'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    
-    // Show low stock warning
-    if (_selectedItem!.isStockTracked && _selectedItem!.isCriticallyLowStock) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Low Stock Warning'),
-          content: Text(
-            '${_selectedItem!.name} is running low. Current stock: ${_selectedItem!.currentStock} ${_selectedItem!.unit}\n\n'
-            'Consider restocking soon.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _createAndReturnItem(quantity);
-              },
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    
-    // Check stock with warning but allow override
-    if (quantity > _selectedItem!.currentStock) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Low Stock Warning'),
-          content: Text(
-            'Only ${_selectedItem!.currentStock} ${_selectedItem!.unit} of ${_selectedItem!.name} available.\n\n'
-            'Do you want to proceed with the current quantity?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _createAndReturnItem(quantity);
-              },
-              child: const Text('Proceed'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    
-    _createAndReturnItem();
-  }
-  
-  void _createAndReturnItem([double? quantityParam]) {
-    final quantity = quantityParam ?? (double.tryParse(_quantityController.text) ?? 1.0);
-    final price = _isFreeItem ? 0.0 : (double.tryParse(_priceController.text) ?? 0.0);
-    final discount = double.tryParse(_discountController.text) ?? 0.0;
-    final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
-    
-    final item = InvoiceItem(
-      name: _selectedItem!.name,
-      hsnCode: _selectedItem!.hsnCode,
-      quantity: quantity,
-      unit: _selectedItem!.unit,
-      price: price,
-      taxRate: taxRate,
-      taxType: _selectedTaxType, // Use the selected tax type
-      discount: discount,
-      isFreeItem: _isFreeItem,
-      isTaxInclusive: _selectedTaxType == 'Tax Incl.', // Set if tax is inclusive
-    );
-    
-    // Calculate CGST/SGST/IGST based on tax type
-    if (_selectedTaxType == 'GST') {
-      final taxAmount = (price * quantity * (taxRate / 100));
-      item.cgst = taxAmount / 2;
-      item.sgst = taxAmount / 2;
-    } else if (_selectedTaxType == 'IGST') {
-      item.igst = (price * quantity * (taxRate / 100));
-    }
-    
-    Navigator.pop(context, item);
   }
 }
 
@@ -611,7 +453,7 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
   
   // UI state
   String _saleType = 'Cash';
-  String _taxType = 'GST';
+  DateTime _dueDate = DateTime.now().add(const Duration(days: 30));
   bool _isLoading = false;
   bool _isDisposed = false;
   
@@ -627,8 +469,9 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
   // Invoice details
   String _invoiceNumber = '';
   DateTime _invoiceDate = DateTime.now();
-  double _globalDiscount = 0.0;
   double _roundOff = 0.0;
+  double _grandDiscountPercent = 0.0;
+  double _grandDiscountAmount = 0.0;
   
   // Controllers
   final TextEditingController _notesController = TextEditingController();
@@ -636,6 +479,9 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _discountController = TextEditingController();
   final TextEditingController _roundOffController = TextEditingController();
+  final TextEditingController _customerController = TextEditingController();
+  final TextEditingController _grandDiscountPercentController = TextEditingController();
+  final TextEditingController _grandDiscountAmountController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   Account? _selectedAccount;
 
@@ -646,6 +492,9 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
     _initializeData();
+    
+    // Initialize date controller
+    _dateController.text = '${_invoiceDate.day}/${_invoiceDate.month}/${_invoiceDate.year}';
   }
   
   @override
@@ -659,6 +508,9 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
     _dateController.dispose();
     _discountController.dispose();
     _roundOffController.dispose();
+    _customerController.dispose();
+    _grandDiscountPercentController.dispose();
+    _grandDiscountAmountController.dispose();
     super.dispose();
   }
   
@@ -691,15 +543,21 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
     });
 
     try {
-      final result = await ItemService.getItems(
-        page: _currentPage,
-        searchQuery: _searchQuery,
-      );
+      // Get all items from Hive box
+      final items = Hive.box<Item>('itemsBox').values.toList();
+      
+      // Apply search filter if query exists
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        items.retainWhere((item) => 
+          item.name.toLowerCase().contains(query)
+        );
+      }
 
       _safeSetState(() {
-        _allItems.addAll(result.items);
-        _hasMoreItems = result.hasMore;
-        _currentPage++;
+        _allItems.clear();
+        _allItems.addAll(items);
+        _hasMoreItems = false; // Since we're loading all items at once
       });
     } catch (e) {
       debugPrint('Error loading more items: $e');
@@ -783,7 +641,7 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
     }
   }
 
-  Future<void> _addItem() async {
+  Future<void> _addItem({int? editIndex}) async {
     // Show loading indicator
     _safeSetState(() {
       _isLoading = true;
@@ -814,13 +672,27 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
       // Create a local copy of items for the dialog
       final dialogItems = List<Item>.from(_allItems);
       
-      final item = await showDialog<InvoiceItem>(
+      // If editing, find the original item
+      InvoiceItem? itemToEdit;
+      Item? selectedItem;
+      
+      if (editIndex != null && editIndex < _selectedItems.length) {
+        itemToEdit = _selectedItems[editIndex];
+        // Find the corresponding item in the dialog items
+        selectedItem = dialogItems.firstWhere(
+          (item) => item.name == itemToEdit!.name,
+          orElse: () => Item(name: itemToEdit!.name, unit: itemToEdit.unit),
+        );
+      }
+      
+      final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => _AddItemDialog(
           items: dialogItems,
           searchQuery: _searchQuery,
           currentPage: _currentPage,
           allItems: dialogItems,
+          selectedItem: selectedItem, // Pass the selected item to the dialog
           loadMoreItems: () async {
             await _loadMoreItems();
             // Update the dialog with new items if any
@@ -835,13 +707,20 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
               (context as Element).markNeedsBuild();
             }
           },
+          initialItem: itemToEdit,
         ),
         barrierDismissible: false,
       );
       
-      if (item != null && !_isDisposed && mounted) {
+      if (result != null && !_isDisposed && mounted) {
         _safeSetState(() {
-          _selectedItems.add(item);
+          if (editIndex != null && editIndex < _selectedItems.length) {
+            // Update existing item
+            _selectedItems[editIndex] = result['item'] as InvoiceItem;
+          } else {
+            // Add new item
+            _selectedItems.add(result['item'] as InvoiceItem);
+          }
         });
       }
     } catch (e) {
@@ -872,6 +751,15 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
       }
       return;
     }
+    
+    if (_selectedAccount == null) {
+      if (!_isDisposed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a customer')),
+        );
+      }
+      return;
+    }
 
     _safeSetState(() {
       _isLoading = true;
@@ -892,18 +780,11 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
       final newInvoiceItems = _selectedItems.map((item) {
         return InvoiceItem(
           name: item.name,
-          hsnCode: item.hsnCode,
           quantity: item.quantity,
           unit: item.unit,
           price: item.price,
-          taxRate: item.taxRate,
-          taxType: item.taxType,
           discount: item.discount,
-          cgst: item.cgst,
-          sgst: item.sgst,
-          igst: item.igst,
-          isTaxInclusive: item.isTaxInclusive,
-          isFreeItem: item.isFreeItem,
+
         )..originalItemKey = item.key; // Store reference to original item
       }).toList();
 
@@ -913,14 +794,13 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
         type: InvoiceType.sale,
         partyName: _selectedAccount?.name ?? 'Unknown Customer',
         date: _invoiceDate,
+        dueDate: _dueDate,
         invoiceNumber: _invoiceNumberController.text,
-        taxType: _taxType,
         items: newInvoiceItems,
         total: _totalAmount,
         notes: _notesController.text,
         discount: _totalDiscount,
         roundOff: _roundOff,
-        totalTaxAmount: _taxAmount,
         saleType: _saleType,
         accountKey: _selectedAccount?.key,
       );
@@ -980,21 +860,25 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
   }
 
   double get _totalDiscount {
-    return _selectedItems.fold(0.0, (sum, item) => sum + (item.discount));
+    return _selectedItems.fold(0.0, (sum, item) => sum + item.discount);
   }
 
-  double get _taxableAmount {
-    return _subTotal - _totalDiscount;
+  double get _totalAmount => _subTotal - _totalDiscount - _grandDiscountAmount + _roundOff;
+  
+  void _updateGrandDiscountFromPercent(String value) {
+    final percent = double.tryParse(value) ?? 0.0;
+    _grandDiscountPercent = percent;
+    _grandDiscountAmount = (_subTotal * percent / 100);
+    _grandDiscountAmountController.text = _grandDiscountAmount.toStringAsFixed(2);
+    setState(() {});
   }
 
-  double get _taxAmount {
-    return _selectedItems.fold(0, (sum, item) {
-      return sum + ((item.price * item.quantity - item.discount) * (item.taxRate / 100));
-    });
-  }
-
-  double get _totalAmount {
-    return _taxableAmount + _taxAmount - _globalDiscount + _roundOff;
+  void _updateGrandDiscountFromAmount(String value) {
+    final amount = double.tryParse(value) ?? 0.0;
+    _grandDiscountAmount = amount;
+    _grandDiscountPercent = _subTotal > 0 ? (amount / _subTotal * 100) : 0.0;
+    _grandDiscountPercentController.text = _grandDiscountPercent.toStringAsFixed(2);
+    setState(() {});
   }
 
   @override
@@ -1078,16 +962,21 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
                             }
                             return customers.where((account) =>
                               account.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
-                              account.phone.toLowerCase().contains(textEditingValue.text.toLowerCase())
+                              (account.phone.toLowerCase().contains(textEditingValue.text.toLowerCase()))
                             );
                           },
-                          displayStringForOption: (Account option) => '${option.name} (${option.phone})',
+                          displayStringForOption: (Account option) => option.name,
                           fieldViewBuilder: (
                             BuildContext context,
                             TextEditingController fieldTextEditingController,
                             FocusNode fieldFocusNode,
                             VoidCallback onFieldSubmitted,
                           ) {
+                            // Update the controller text when _selectedAccount changes
+                            if (_selectedAccount != null && fieldTextEditingController.text.isEmpty) {
+                              fieldTextEditingController.text = _selectedAccount!.name;
+                            }
+                            
                             return TextFormField(
                               controller: fieldTextEditingController,
                               focusNode: fieldFocusNode,
@@ -1106,9 +995,9 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
                             );
                           },
                           onSelected: (Account selection) {
-                            setState(() {
-                              _selectedAccount = selection;
-                            });
+                            _selectedAccount = selection;
+                            _customerController.text = selection.name;
+                            setState(() {}); // Trigger a rebuild
                           },
                           optionsViewBuilder: (
                             BuildContext context,
@@ -1183,25 +1072,31 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _taxType,
-                            decoration: const InputDecoration(
-                              labelText: 'Tax Type',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: ['GST', 'VAT', 'None'].map((type) {
-                              return DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
+                          child: InkWell(
+                            onTap: () async {
+                              final DateTime? picked = await showDatePicker(
+                                context: context,
+                                initialDate: _dueDate,
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime(2100),
                               );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
+                              if (picked != null && picked != _dueDate) {
                                 _safeSetState(() {
-                                  _taxType = value;
+                                  _dueDate = picked;
                                 });
                               }
                             },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Due Date',
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.calendar_today),
+                              ),
+                              child: Text(
+                                '${_dueDate.day}/${_dueDate.month}/${_dueDate.year}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -1227,9 +1122,19 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
                             child: ListTile(
                               title: Text(item.name),
                               subtitle: Text('${item.quantity} ${item.unit} × ₹${item.price} = ₹${(item.quantity * item.price).toStringAsFixed(2)}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _removeItem(index),
+                              onTap: () => _addItem(editIndex: index),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                    onPressed: () => _addItem(editIndex: index),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _removeItem(index),
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -1246,14 +1151,80 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
                     const Text('Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     _buildSummaryRow('Subtotal', _subTotal),
-                    _buildSummaryRow('Total Discount', -_totalDiscount),
-                    _buildSummaryRow('Taxable Amount', _taxableAmount),
-                    _buildSummaryRow('Tax Amount', _taxAmount),
-                    _buildSummaryRow('Global Discount', -_globalDiscount),
-                    _buildSummaryRow('Round Off', _roundOff),
+                    _buildSummaryRow('Total Items Discount', -_totalDiscount),
+                    const SizedBox(height: 8),
+                    // Grand Discount Row
+                    Row(
+                      children: [
+                        const Text('Grand Discount:'),
+                        const SizedBox(width: 8),
+                        // Percentage input (smaller width)
+                        SizedBox(
+                          width: 120,
+                          child: TextFormField(
+                            controller: _grandDiscountPercentController,
+                            textAlign: TextAlign.right,
+                            decoration: const InputDecoration(
+                              hintText: '0.0',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              isDense: true,
+                              suffix: Text('%  '),
+                            ),
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            onChanged: _updateGrandDiscountFromPercent,
+                          ),
+                        ),
+                        // Amount input
+                        Expanded(
+                          child: TextFormField(
+                            controller: _grandDiscountAmountController,
+                            decoration: const InputDecoration(
+                              hintText: '0.00',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              isDense: true,
+                              prefix: Text('  ₹  '),
+                            ),
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            onChanged: _updateGrandDiscountFromAmount,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Display grand discount amount
+                    if (_grandDiscountAmount > 0)
+                      _buildSummaryRow('Grand Discount', -_grandDiscountAmount, textColor: Colors.red),
+                    const SizedBox(height: 16), // Added more space here
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Round Off:'),
+                        SizedBox(
+                          width: 150, // Fixed width
+                          child: TextFormField(
+                            controller: _roundOffController,
+                            textAlign: TextAlign.right,
+                            decoration: const InputDecoration(
+                              hintText: '0.00',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              isDense: true,
+                              prefix: Text('  ₹  '),
+                            ),
+                            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
+                            onChanged: (value) {
+                              final roundOff = double.tryParse(value) ?? 0.0;
+                              _safeSetState(() {
+                                _roundOff = roundOff;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                     const Divider(),
                     _buildSummaryRow('Total', _totalAmount, isBold: true),
-                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _notesController,
                       decoration: const InputDecoration(
@@ -1278,7 +1249,7 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount, {bool isBold = false}) {
+  Widget _buildSummaryRow(String label, double amount, {bool isBold = false, Color? textColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -1286,11 +1257,19 @@ class SalesInvoiceScreenState extends State<SalesInvoiceScreen> {
         children: [
           Text(
             label,
-            style: isBold ? const TextStyle(fontWeight: FontWeight.bold) : null,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+              color: textColor,
+            ),
           ),
           Text(
             '₹${amount.toStringAsFixed(2)}',
-            style: isBold ? const TextStyle(fontWeight: FontWeight.bold) : null,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+              color: textColor,
+            ),
           ),
         ],
       ),

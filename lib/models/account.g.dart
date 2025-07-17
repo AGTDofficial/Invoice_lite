@@ -25,20 +25,23 @@ class AccountAdapter extends TypeAdapter<Account> {
       address: fields[5] == null ? '' : fields[5] as String?,
       country: fields[6] == null ? '' : fields[6] as String?,
       state: fields[7] == null ? '' : fields[7] as String?,
-      dealerType: fields[8] as String?,
-      gstinUin: fields[9] == null ? '' : fields[9] as String?,
-      email: fields[10] == null ? '' : fields[10] as String?,
-      isActive: fields[11] == null ? true : fields[11] as bool,
-      colorValue: fields[12] == null ? 0 : fields[12] as int,
-      isCustomer: fields[13] == null ? false : fields[13] as bool,
-      isSupplier: fields[14] == null ? false : fields[14] as bool,
+      gstinUin: fields[8] == null ? '' : fields[8] as String?,
+      email: fields[9] == null ? '' : fields[9] as String?,
+      isActive: fields[10] == null ? true : fields[10] as bool,
+      creditLimit: fields[11] == null ? 0 : fields[11] as double,
+      creditDays: fields[12] == null ? 0 : fields[12] as int,
+      creditAmount: fields[13] == null ? 0 : fields[13] as double,
+      panNumber: fields[14] == null ? '' : fields[14] as String?,
+      colorValue: fields[15] == null ? 0 : fields[15] as int,
+      isCustomer: fields[16] == null ? false : fields[16] as bool,
+      isSupplier: fields[17] == null ? false : fields[17] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -56,18 +59,24 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(7)
       ..write(obj.state)
       ..writeByte(8)
-      ..write(obj.dealerType)
-      ..writeByte(9)
       ..write(obj.gstinUin)
-      ..writeByte(10)
+      ..writeByte(9)
       ..write(obj.email)
-      ..writeByte(11)
+      ..writeByte(10)
       ..write(obj.isActive)
+      ..writeByte(11)
+      ..write(obj.creditLimit)
       ..writeByte(12)
-      ..write(obj.colorValue)
+      ..write(obj.creditDays)
       ..writeByte(13)
-      ..write(obj.isCustomer)
+      ..write(obj.creditAmount)
       ..writeByte(14)
+      ..write(obj.panNumber)
+      ..writeByte(15)
+      ..write(obj.colorValue)
+      ..writeByte(16)
+      ..write(obj.isCustomer)
+      ..writeByte(17)
       ..write(obj.isSupplier);
   }
 

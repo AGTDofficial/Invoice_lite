@@ -15,18 +15,14 @@ class Invoice extends HiveObject {
   @HiveField(2)
   String partyName;
   
-  @HiveField(14)
+  @HiveField(3)
   int? accountKey; // Reference to Account in Hive
 
-  @HiveField(3)
+  @HiveField(4)
   DateTime date;
 
-  @HiveField(4)
-  String invoiceNumber;
-
   @HiveField(5)
-  String taxType; // GST, Composition, etc.
-
+  String invoiceNumber;
 
   @HiveField(6)
   List<InvoiceItem> items;
@@ -38,22 +34,22 @@ class Invoice extends HiveObject {
   String? notes;
 
   @HiveField(9)
-  double? discount;
+  double discount;
 
   @HiveField(10)
-  double? roundOff;
+  double roundOff;
 
   @HiveField(11)
-  double? totalTaxAmount;
-
-  @HiveField(12)
   String? saleType; // Sale, Purchase, Sale Return, Purchase Return
 
-  @HiveField(13)
+  @HiveField(12)
   String? originalInvoiceNumber;
 
-  @HiveField(15)
-  bool isReturn = false;
+  @HiveField(13)
+  bool isReturn;
+
+  @HiveField(14)
+  DateTime? dueDate;
 
   Invoice({
     required this.id,
@@ -61,17 +57,16 @@ class Invoice extends HiveObject {
     required this.partyName,
     required this.date,
     required this.invoiceNumber,
-    required this.taxType,
     required this.items,
     required this.total,
     this.notes,
     this.discount = 0.0,
     this.roundOff = 0.0,
-    this.totalTaxAmount = 0.0,
     this.saleType,
     this.originalInvoiceNumber,
     this.isReturn = false,
     this.accountKey,
+    this.dueDate,
   });
 
   Invoice copyWith({
@@ -80,17 +75,16 @@ class Invoice extends HiveObject {
     String? partyName,
     DateTime? date,
     String? invoiceNumber,
-    String? taxType,
     List<InvoiceItem>? items,
     double? total,
     String? notes,
     double? discount,
     double? roundOff,
-    double? totalTaxAmount,
     String? saleType,
     String? originalInvoiceNumber,
     bool? isReturn,
     int? accountKey,
+    DateTime? dueDate,
   }) {
     return Invoice(
       id: id ?? this.id,
@@ -98,29 +92,26 @@ class Invoice extends HiveObject {
       partyName: partyName ?? this.partyName,
       date: date ?? this.date,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
-      taxType: taxType ?? this.taxType,
       items: items ?? this.items,
       total: total ?? this.total,
       notes: notes ?? this.notes,
       discount: discount ?? this.discount,
       roundOff: roundOff ?? this.roundOff,
-      totalTaxAmount: totalTaxAmount ?? this.totalTaxAmount,
       saleType: saleType ?? this.saleType,
       originalInvoiceNumber: originalInvoiceNumber ?? this.originalInvoiceNumber,
       isReturn: isReturn ?? this.isReturn,
       accountKey: accountKey ?? this.accountKey,
+      dueDate: dueDate ?? this.dueDate,
     );
   }
 
-  // Helper method to get the total amount before tax
+  // Helper method to get the subtotal amount (before discount)
   double get subtotal {
     return items.fold(0, (sum, item) => sum + (item.price * item.quantity));
   }
 
-  // Helper method to calculate total tax
-  double calculateTotalTax() {
-    return items.fold(0, (sum, item) {
-      return sum + ((item.price * item.quantity - item.discount) * item.taxRate / 100);
-    });
+  // Helper method to calculate total after discount
+  double get totalAfterDiscount {
+    return (subtotal - discount).clamp(0, double.infinity);
   }
 }

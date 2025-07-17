@@ -29,6 +29,10 @@ class StockMovementTypeAdapter extends TypeAdapter<StockMovementType> {
         return StockMovementType.productionOut;
       case 7:
         return StockMovementType.adjustment;
+      case 8:
+        return StockMovementType.salesReturn;
+      case 9:
+        return StockMovementType.purchaseReturn;
       default:
         return StockMovementType.openingStock;
     }
@@ -60,6 +64,12 @@ class StockMovementTypeAdapter extends TypeAdapter<StockMovementType> {
         break;
       case StockMovementType.adjustment:
         writer.writeByte(7);
+        break;
+      case StockMovementType.salesReturn:
+        writer.writeByte(8);
+        break;
+      case StockMovementType.purchaseReturn:
+        writer.writeByte(9);
         break;
     }
   }

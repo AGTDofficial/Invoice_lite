@@ -49,7 +49,6 @@ class _SaleReturnScreenState extends State<SaleReturnScreen> {
   double _globalDiscount = 0.0;
   double _roundOff = 0.0;
   DateTime _invoiceDate = DateTime.now();
-  String _taxType = 'GST';
   
   // Calculate subtotal amount (sum of all items before tax and discounts)
   double get _subTotal {
@@ -58,17 +57,9 @@ class _SaleReturnScreenState extends State<SaleReturnScreen> {
     });
   }
   
-  // Calculate total tax amount
-  double get _totalTax {
-    return _selectedItems.fold(0.0, (sum, item) {
-      final itemTotal = (item.quantity * item.price) - item.discount;
-      return sum + (itemTotal * item.taxRate / 100);
-    });
-  }
-  
-  // Calculate total amount including tax, discount, and round off
+  // Calculate total amount including discount and round off
   double get _calculatedTotalAmount {
-    return (_subTotal + _totalTax - _globalDiscount) + _roundOff;
+    return (_subTotal - _globalDiscount) + _roundOff;
   }
   
   @override
@@ -262,7 +253,6 @@ class _SaleReturnScreenState extends State<SaleReturnScreen> {
             const Text('Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             _buildSummaryRow('Subtotal', _subTotal),
-            _buildSummaryRow('Tax', _totalTax),
             if (_globalDiscount > 0) _buildSummaryRow('Discount', -_globalDiscount),
             if (_roundOff != 0) _buildSummaryRow('Round Off', _roundOff),
             const Divider(),
@@ -289,15 +279,9 @@ class _SaleReturnScreenState extends State<SaleReturnScreen> {
             quantity: item['quantity'] ?? 0,
             unit: item['unit'] ?? 'pcs',
             price: (item['price'] ?? 0.0).toDouble(),
-            taxRate: (item['taxRate'] ?? 0.0).toDouble(),
             discount: (item['discount'] ?? 0.0).toDouble(),
-            cgst: (item['cgst'] ?? 0.0).toDouble(),
-            sgst: (item['sgst'] ?? 0.0).toDouble(),
-            igst: (item['igst'] ?? 0.0).toDouble(),
-            hsnCode: item['hsnCode'],
             returnReason: item['returnReason'],
             originalInvoiceItemId: item['originalInvoiceItemId'],
-            isFreeItem: item['isFreeItem'] ?? false,
           );
         }
         throw Exception('Invalid item data type: ${item.runtimeType}');
@@ -483,10 +467,9 @@ class _SaleReturnScreenState extends State<SaleReturnScreen> {
       
       // Calculate totals
       final subTotal = _selectedItems.fold(0.0, (sum, item) => sum + (item.quantity * item.price));
-      final taxAmount = _selectedItems.fold(0.0, (sum, item) => sum + item.taxAmount);
       final totalDiscount = _globalDiscount;
       final roundOff = _roundOff;
-      final total = subTotal + taxAmount - totalDiscount + roundOff;
+      final total = subTotal - totalDiscount + roundOff;
       
       final invoice = Invoice(
         id: const Uuid().v4(),
@@ -496,13 +479,11 @@ class _SaleReturnScreenState extends State<SaleReturnScreen> {
             : _selectedCustomer?.name ?? 'Walk-in Customer',
         date: _invoiceDate,
         invoiceNumber: _invoiceNumberController.text,
-        taxType: _taxType,
         items: List<InvoiceItem>.from(_selectedItems),
         total: total,
         notes: _notesController.text,
         discount: totalDiscount,
         roundOff: roundOff,
-        totalTaxAmount: taxAmount,
         saleType: 'Sale Return',
         originalInvoiceNumber: _selectedInvoice?.invoiceNumber,
         isReturn: true,
@@ -760,31 +741,16 @@ class _AddReturnItemDialogState extends State<_AddReturnItemDialog> {
       return;
     }
 
-    // Calculate CGST/SGST or IGST based on tax type
-    double cgst = 0.0, sgst = 0.0, igst = 0.0;
-    final taxAmount = _taxAmount;
-    
-    if (_selectedTaxType == 'GST') {
-      cgst = taxAmount / 2; // Split 50/50 for CGST/SGST
-      sgst = taxAmount / 2;
-    } else if (_selectedTaxType == 'IGST') {
-      igst = taxAmount;
-    }
-    // For 'Exempt' and 'Tax Incl.', all tax values remain 0.0
+    // Tax calculations have been removed as per requirements
     
     final returnItem = InvoiceItem(
       name: _getItemName(_selectedItem),
       quantity: quantity.toDouble(),
       unit: _selectedItem?.unit ?? 'pcs', // Default to 'pcs' if unit is not available
       price: double.parse(_priceController.text),
-      taxRate: double.parse(_taxRateController.text),
       discount: double.tryParse(_discountController.text) ?? 0,
       returnReason: _reasonController.text,
       originalInvoiceItemId: _selectedItem?.id,
-      cgst: cgst,
-      sgst: sgst,
-      igst: igst,
-      taxType: _selectedTaxType,
     );
 
     widget.onItemAdded(returnItem);

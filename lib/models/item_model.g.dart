@@ -22,25 +22,22 @@ class ItemAdapter extends TypeAdapter<Item> {
       itemGroup: fields[2] as String?,
       itemCode: fields[3] as String?,
       unit: fields[4] as String,
-      taxRate: fields[5] as double,
-      hsnCode: fields[6] as String?,
-      saleRate: fields[7] as double?,
-      purchaseRate: fields[8] as double?,
-      openingStock: fields[9] as double,
-      currentStock: fields[10] as double,
-      isStockTracked: fields[11] as bool,
-      minStockLevel: fields[12] as double,
-      barcode: fields[14] as String?,
-      description: fields[15] as String?,
+      saleRate: fields[5] as double?,
+      purchaseRate: fields[6] as double?,
+      openingStock: fields[7] as double,
+      currentStock: fields[8] as double,
+      isStockTracked: fields[9] as bool,
+      minStockLevel: fields[10] as double,
+      description: fields[12] as String?,
     )
-      ..lastUpdated = fields[13] as DateTime?
+      ..lastUpdated = fields[11] as DateTime?
       ..stockMovements = (fields[16] as List).cast<StockMovement>();
   }
 
   @override
   void write(BinaryWriter writer, Item obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -52,26 +49,20 @@ class ItemAdapter extends TypeAdapter<Item> {
       ..writeByte(4)
       ..write(obj.unit)
       ..writeByte(5)
-      ..write(obj.taxRate)
-      ..writeByte(6)
-      ..write(obj.hsnCode)
-      ..writeByte(7)
       ..write(obj.saleRate)
-      ..writeByte(8)
+      ..writeByte(6)
       ..write(obj.purchaseRate)
-      ..writeByte(9)
+      ..writeByte(7)
       ..write(obj.openingStock)
-      ..writeByte(10)
+      ..writeByte(8)
       ..write(obj.currentStock)
-      ..writeByte(11)
+      ..writeByte(9)
       ..write(obj.isStockTracked)
-      ..writeByte(12)
+      ..writeByte(10)
       ..write(obj.minStockLevel)
-      ..writeByte(13)
+      ..writeByte(11)
       ..write(obj.lastUpdated)
-      ..writeByte(14)
-      ..write(obj.barcode)
-      ..writeByte(15)
+      ..writeByte(12)
       ..write(obj.description)
       ..writeByte(16)
       ..write(obj.stockMovements);

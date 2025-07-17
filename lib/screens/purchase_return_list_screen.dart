@@ -88,7 +88,6 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
           partyName: 'Unknown',
           date: DateTime.now(),
           invoiceNumber: 'Original not found',
-          taxType: 'GST',
           items: [],
           total: 0,
         ),

@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
-import 'package:invoice_app/enums/invoice_type.dart';
-import 'package:invoice_app/models/account.dart';
-import 'package:invoice_app/models/account_group.dart';
-import 'package:invoice_app/models/item_group.dart';
-import 'package:invoice_app/models/company.dart';
-import 'package:invoice_app/models/invoice.dart';
-import 'package:invoice_app/models/invoice_item.dart';
-import 'package:invoice_app/models/item_model.dart';
-import 'package:invoice_app/models/stock_movement.dart';
-import 'package:invoice_app/enums/stock_movement_type.dart';
-import 'package:invoice_app/providers/account_provider.dart';
-import 'package:invoice_app/providers/company_provider.dart';
-import 'package:invoice_app/screens/home_screen.dart';
+import 'enums/invoice_type.dart';
+import 'models/account.dart';
+import 'models/account_group.dart';
+import 'models/item_group.dart';
+import 'models/company.dart';
+import 'models/invoice.dart';
+import 'models/invoice_item.dart';
+import 'models/item_model.dart';
+import 'models/stock_movement.dart';
+import 'enums/stock_movement_type.dart';
+import 'providers/account_provider.dart';
+import 'providers/company_provider.dart';
+import 'screens/home_screen.dart';
 
 // Global box references
 Box<Account>? accountsBox;

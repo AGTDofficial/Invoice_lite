@@ -104,9 +104,6 @@ class AccountProvider with ChangeNotifier {
       final email = account.email;
       if (email != null && email.toLowerCase().contains(lowerQuery)) return true;
       
-      final gstinUin = account.gstinUin;
-      if (gstinUin != null && gstinUin.toLowerCase().contains(lowerQuery)) return true;
-      
       return false;
     }).toList();
   }

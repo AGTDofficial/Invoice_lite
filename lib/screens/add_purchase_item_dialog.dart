@@ -214,17 +214,10 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
       
       final invoiceItem = InvoiceItem(
         name: _selectedItem!.name,
-        hsnCode: _selectedItem!.hsnCode,
         quantity: quantity,
         unit: _selectedItem!.unit,
         price: price,
-        taxRate: _selectedItem!.taxRate,
-        taxType: 'GST', // Default tax type
         discount: 0.0, // Default discount
-        cgst: 0.0, // Will be calculated
-        sgst: 0.0, // Will be calculated
-        igst: 0.0, // Will be calculated
-        isTaxInclusive: false, // Default to tax exclusive
         returnReason: null,
         originalInvoiceItemId: null,
         isFreeItem: false,

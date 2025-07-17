@@ -23,13 +23,14 @@ class StockMovementAdapter extends TypeAdapter<StockMovement> {
       referenceId: fields[3] as String,
       type: fields[4] as StockMovementType,
       balance: fields[5] as double?,
+      narration: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, StockMovement obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.itemId)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class StockMovementAdapter extends TypeAdapter<StockMovement> {
       ..writeByte(4)
       ..write(obj.type)
       ..writeByte(5)
-      ..write(obj.balance);
+      ..write(obj.balance)
+      ..writeByte(6)
+      ..write(obj.narration);
   }
 
   @override

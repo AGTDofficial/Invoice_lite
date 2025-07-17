@@ -14,7 +14,6 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _gstinController = TextEditingController();
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
@@ -28,7 +27,6 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _gstinController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _stateController.dispose();
@@ -51,14 +49,10 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
         email: _emailController.text.trim().isNotEmpty
             ? _emailController.text.trim()
             : null,
-        gstinUin: _gstinController.text.trim().isNotEmpty
-            ? _gstinController.text.trim()
-            : null,
         address: '${_addressController.text.trim()}, ${_cityController.text.trim()}, ${_pincodeController.text.trim()}',
         state: _stateController.text.trim(),
         country: _countryController.text.trim(),
         isSupplier: true,
-        dealerType: 'supplier',
       );
 
       final box = await Hive.openBox<Account>('accounts');
@@ -139,14 +133,6 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _gstinController,
-                      decoration: const InputDecoration(
-                        labelText: 'GSTIN/UIN',
-                        border: OutlineInputBorder(),
-                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

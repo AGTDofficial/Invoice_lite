@@ -21,13 +21,10 @@ class _ItemFormState extends State<ItemForm> {
   final _itemCodeController = TextEditingController();
   String? _selectedItemGroup;
   final _unitController = TextEditingController(text: 'PCS');
-  final _taxRateController = TextEditingController(text: '18.0');
-  final _hsnController = TextEditingController();
   final _saleRateController = TextEditingController();
   final _purchaseRateController = TextEditingController();
   final _openingQtyController = TextEditingController(text: '0');
   final _minStockController = TextEditingController(text: '0');
-  final _barcodeController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _isStockTracked = true;
 
@@ -39,13 +36,10 @@ class _ItemFormState extends State<ItemForm> {
       _itemCodeController.text = widget.item!.itemCode ?? '';
       _selectedItemGroup = widget.item!.itemGroup;
       _unitController.text = widget.item!.unit;
-      _taxRateController.text = widget.item!.taxRate.toString();
-      _hsnController.text = widget.item!.hsnCode ?? '';
       _saleRateController.text = widget.item!.saleRate?.toString() ?? '';
       _purchaseRateController.text = widget.item!.purchaseRate?.toString() ?? '';
       _openingQtyController.text = widget.item!.openingStock.toString();
       _minStockController.text = widget.item!.minStockLevel.toString();
-      _barcodeController.text = widget.item!.barcode ?? '';
       _descriptionController.text = widget.item!.description ?? '';
       _isStockTracked = widget.item!.isStockTracked;
     }
@@ -55,14 +49,11 @@ class _ItemFormState extends State<ItemForm> {
   void dispose() {
     _nameController.dispose();
     _itemCodeController.dispose();
-    _hsnController.dispose();
     _unitController.dispose();
-    _taxRateController.dispose();
     _saleRateController.dispose();
     _purchaseRateController.dispose();
     _openingQtyController.dispose();
     _minStockController.dispose();
-    _barcodeController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -77,15 +68,12 @@ class _ItemFormState extends State<ItemForm> {
         itemGroup: _selectedItemGroup,
         itemCode: _itemCodeController.text.trim().isNotEmpty ? _itemCodeController.text.trim() : null,
         unit: _unitController.text.trim(),
-        taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
-        hsnCode: _hsnController.text.trim().isNotEmpty ? _hsnController.text.trim() : null,
         saleRate: double.tryParse(_saleRateController.text),
         purchaseRate: double.tryParse(_purchaseRateController.text),
         openingStock: openingQty,
         currentStock: _isStockTracked ? openingQty : 0.0,
         isStockTracked: _isStockTracked,
         minStockLevel: double.tryParse(_minStockController.text) ?? 0.0,
-        barcode: _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null,
         description: _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
       );
       
@@ -112,59 +100,21 @@ class _ItemFormState extends State<ItemForm> {
               },
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _itemCodeController,
-                    decoration: const InputDecoration(labelText: 'Item Code'),
-                    keyboardType: TextInputType.text,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _hsnController,
-                    decoration: const InputDecoration(labelText: 'HSN/SAC Code'),
-                    keyboardType: TextInputType.text,
-                  ),
-                ),
-              ],
+            TextFormField(
+              controller: _itemCodeController,
+              decoration: const InputDecoration(labelText: 'Item Code'),
+              keyboardType: TextInputType.text,
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    controller: _unitController,
-                    decoration: const InputDecoration(labelText: 'Unit *'),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Required';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _taxRateController,
-                    decoration: const InputDecoration(labelText: 'Tax Rate % *', suffixText: '%'),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Required';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Invalid number';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
+            TextFormField(
+              controller: _unitController,
+              decoration: const InputDecoration(labelText: 'Unit *'),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Required';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             Row(
@@ -228,12 +178,6 @@ class _ItemFormState extends State<ItemForm> {
                 }
                 return null;
               },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _barcodeController,
-              decoration: const InputDecoration(labelText: 'Barcode'),
-              keyboardType: TextInputType.text,
             ),
             const SizedBox(height: 16),
             TextFormField(

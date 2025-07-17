@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import '../models/company.dart';
-import '../utils/text_formatters.dart';
-import '../utils/constants.dart';
 
 class CompanyFormScreen extends StatefulWidget {
   final Company? company;
@@ -23,86 +21,66 @@ class _CompanyFormScreenState extends State<CompanyFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
-  final _gstinController = TextEditingController();
   final _mobileNumberController = TextEditingController();
   final _stateSearchController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _pincodeController = TextEditingController();
   
-  DateTime _selectedDate = DateTime.now();
   String _selectedState = 'Maharashtra';
-  String _selectedDealerType = 'Regular';
-  String _gstStatus = 'Registered';
-  String? _businessType;
+  String _businessType = 'Other';
+  final DateTime _financialYearStart = DateTime(DateTime.now().month >= 4 
+      ? DateTime.now().year 
+      : DateTime.now().year - 1, 4, 1); // April 1st of current financial year
 
   bool get isEditing => widget.company != null;
-
-  // State list is available through gstStateCodeMap
 
   @override
   void initState() {
     super.initState();
     _initializeFields();
-    _gstinController.addListener(_handleGSTINChange);
   }
 
   @override
   void dispose() {
-    _gstinController.removeListener(_handleGSTINChange);
     _nameController.dispose();
     _addressController.dispose();
-    _gstinController.dispose();
     _mobileNumberController.dispose();
+    _emailController.dispose();
+    _pincodeController.dispose();
     _stateSearchController.dispose();
     super.dispose();
   }
 
   void _initializeFields() {
-    final company = widget.company;
-    if (company != null) {
+    if (widget.company != null) {
+      final company = widget.company!;
       _nameController.text = company.name;
       _addressController.text = company.address;
-      _gstinController.text = company.gstin;
       _mobileNumberController.text = company.mobileNumber;
+      _emailController.text = company.email;
+      _pincodeController.text = company.pincode;
       _selectedState = company.businessState;
-      _selectedDealerType = company.dealerType;
+      _businessType = company.businessType ?? 'Other';
       _stateSearchController.text = company.businessState;
-      _gstStatus = company.isRegistered ? 'Registered' : 'Unregistered';
-      _businessType = company.businessType;
     }
   }
 
-  void _handleGSTINChange() {
-    final gstin = _gstinController.text;
-    if (gstin.length >= 2) {
-      final stateCode = gstin.substring(0, 2);
-      final stateName = getStateNameFromGSTCode(stateCode);
-      if (stateName != null && stateName != _selectedState) {
-        setState(() {
-          _selectedState = stateName;
-          _stateSearchController.text = stateName;
-        });
-      }
-    }
-  }
+
 
   Future<void> _saveForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-
+    if (!_formKey.currentState!.validate()) return;
 
     final company = Company(
       name: _nameController.text.trim(),
       address: _addressController.text.trim(),
-      gstin: _gstinController.text.trim(),
-      financialYearStart: _selectedDate,
       mobileNumber: _mobileNumberController.text.trim(),
+      email: _emailController.text.trim(),
+      pincode: _pincodeController.text.trim(),
       businessState: _selectedState,
-      dealerType: _selectedDealerType,
-      isRegistered: _gstStatus == 'Registered',
       businessType: _businessType,
-      email: '${_nameController.text.trim().toLowerCase()}@company.com',
-      pincode: '000000', // Default pincode
+      gstin: '', // Empty string as GST is not required
+      financialYearStart: _financialYearStart,
+      dealerType: 'Regular', // Default value
     );
 
     final box = Hive.box<Company>('companies');
@@ -153,81 +131,29 @@ class _CompanyFormScreenState extends State<CompanyFormScreen> {
             ),
             const SizedBox(height: 16),
             
-            // GST Registration Status
+            // Business Type
             DropdownButtonFormField<String>(
-              value: _gstStatus,
-              decoration: const InputDecoration(labelText: 'GST Registration Status'),
-              items: ['Registered', 'Unregistered']
-                  .map((status) => DropdownMenuItem(
-                        value: status,
-                        child: Text(status),
+              value: _businessType,
+              decoration: const InputDecoration(labelText: 'Business Type'),
+              items: const ['Retail', 'Wholesale', 'Service', 'Manufacturing', 'Other']
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type),
                       ))
                   .toList(),
               onChanged: (value) {
                 setState(() {
-                  _gstStatus = value!;
-                  if (_gstStatus == 'Unregistered') {
-                    _gstinController.clear();
-                    _businessType = null;
-                  }
+                  _businessType = value!;
                 });
               },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select business type';
+                }
+                return null;
+              },
             ),
-            const SizedBox(height: 16),
             
-            // GST Number (only if registered)
-            if (_gstStatus == 'Registered')
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _gstinController,
-                    decoration: const InputDecoration(
-                      labelText: 'GST Number',
-                      hintText: '22AAAAA0000A1Z5',
-                    ),
-                    inputFormatters: [
-                      UpperCaseTextFormatter(),
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9A-Z]')),
-                      LengthLimitingTextInputFormatter(15),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter GST number';
-                      }
-                      if (value.length != 15) {
-                        return 'GST number must be 15 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Business Type (only if registered)
-                  DropdownButtonFormField<String>(
-                    value: _businessType,
-                    decoration: const InputDecoration(labelText: 'Business Type'),
-                    items: ['Regular', 'Composition']
-                        .map((type) => DropdownMenuItem(
-                              value: type,
-                              child: Text(type),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _businessType = value!;
-                      });
-                    },
-                    validator: (value) {
-                      if (_gstStatus == 'Registered' && (value == null || value.isEmpty)) {
-                        return 'Please select business type';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            
-            // Other existing fields...
             const SizedBox(height: 16),
             TextFormField(
               controller: _addressController,

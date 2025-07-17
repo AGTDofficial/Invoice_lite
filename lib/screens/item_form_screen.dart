@@ -26,21 +26,18 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _itemCodeController = TextEditingController();
-  final _hsnCodeController = TextEditingController();
   final _saleRateController = TextEditingController();
   final _purchaseRateController = TextEditingController();
   final _openingStockController = TextEditingController();
   final _minStockLevelController = TextEditingController();
-  final _barcodeController = TextEditingController();
+
   final _descriptionController = TextEditingController();
 
   String? _selectedGroup;
   String? _selectedUnit = 'PCS';
-  double _taxRate = 0.0;
   bool _isStockTracked = false;
   // Using a Set to ensure unique units
   final Set<String> _commonUnits = {'PCS', 'KG', 'LTR', 'MTR', 'BOX', 'PKT'}.toSet();
-  final List<double> _taxRates = [0, 5, 12, 18, 28];
   final _groupBox = Hive.box<ItemGroup>('itemGroups');
 
   @override
@@ -54,16 +51,14 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
   void _loadItemData(Item item) {
     _nameController.text = item.name;
     _itemCodeController.text = item.itemCode ?? '';
-    _hsnCodeController.text = item.hsnCode ?? '';
     _saleRateController.text = item.saleRate?.toString() ?? '';
     _purchaseRateController.text = item.purchaseRate?.toString() ?? '';
     _openingStockController.text = item.openingStock.toString();
     _minStockLevelController.text = item.minStockLevel.toString();
-    _barcodeController.text = item.barcode ?? '';
+
     _descriptionController.text = item.description ?? '';
     _selectedGroup = item.itemGroup;
     _selectedUnit = item.unit;
-    _taxRate = item.taxRate;
     _isStockTracked = item.isStockTracked;
   }
 
@@ -71,12 +66,11 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
   void dispose() {
     _nameController.dispose();
     _itemCodeController.dispose();
-    _hsnCodeController.dispose();
     _saleRateController.dispose();
     _purchaseRateController.dispose();
     _openingStockController.dispose();
     _minStockLevelController.dispose();
-    _barcodeController.dispose();
+
     _descriptionController.dispose();
     super.dispose();
   }
@@ -112,19 +106,14 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
           ? _itemCodeController.text.trim()
           : '',
       unit: _selectedUnit!,
-      taxRate: _taxRate,
-      hsnCode: _hsnCodeController.text.trim().isNotEmpty
-          ? _hsnCodeController.text.trim()
-          : '',
+
       saleRate: double.tryParse(_saleRateController.text) ?? 0.0,
       purchaseRate: double.tryParse(_purchaseRateController.text) ?? 0.0,
       openingStock: openingStock,
       currentStock: currentStock,
       isStockTracked: _isStockTracked,
       minStockLevel: double.tryParse(_minStockLevelController.text) ?? 0.0,
-      barcode: _barcodeController.text.trim().isNotEmpty
-          ? _barcodeController.text.trim()
-          : '',
+
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : '',
@@ -235,14 +224,6 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
             ),
             const SizedBox(height: 8),
             _buildUnitDropdown(),
-            const SizedBox(height: 8),
-            _buildTaxRateDropdown(),
-            const SizedBox(height: 8),
-            _buildTextField(
-              controller: _hsnCodeController,
-              label: 'HSN/SAC Code',
-            ),
-            const SizedBox(height: 24),
 
             // Pricing Section
             _buildSectionHeader('Pricing'),
@@ -290,11 +271,7 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
 
             // Additional Information Section
             _buildSectionHeader('Additional Information'),
-            _buildTextField(
-              controller: _barcodeController,
-              label: 'Barcode',
-            ),
-            const SizedBox(height: 8),
+
             _buildTextField(
               controller: _descriptionController,
               label: 'Description',
@@ -451,30 +428,6 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
     );
   }
 
-  Widget _buildTaxRateDropdown() {
-    return DropdownButtonFormField<double>(
-      value: _taxRate,
-      decoration: const InputDecoration(
-        labelText: 'Tax Rate (%)',
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        suffixIcon: Icon(Icons.percent),
-      ),
-      items: _taxRates.map((rate) {
-        return DropdownMenuItem<double>(
-          value: rate,
-          child: Text('$rate%' + (rate == 0 ? ' (Exempt)' : '')),
-        );
-      }).toList(),
-      onChanged: (value) {
-        if (value != null) {
-          setState(() {
-            _taxRate = value;
-          });
-        }
-      },
-    );
-  }
 
   Future<void> _showCustomUnitDialog() async {
     final TextEditingController controller = TextEditingController();

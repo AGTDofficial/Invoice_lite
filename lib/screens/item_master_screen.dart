@@ -46,8 +46,7 @@ class _ItemMasterScreenState extends State<ItemMasterScreen> {
   List<Item> get _filteredItems {
     return itemsBox.values.where((item) {
       final matchesSearch = item.name.toLowerCase().contains(_searchQuery) ||
-          (item.itemCode?.toLowerCase().contains(_searchQuery) ?? false) ||
-          (item.hsnCode?.toLowerCase().contains(_searchQuery) ?? false);
+          (item.itemCode?.toLowerCase().contains(_searchQuery) ?? false);
       
       final matchesGroup = _selectedGroup == null || item.itemGroup == _selectedGroup;
       final matchesLowStockFilter = !_showLowStockOnly || item.isLowStock;
@@ -330,8 +329,6 @@ class _ItemMasterScreenState extends State<ItemMasterScreen> {
                           children: [
                             if (item.itemCode?.isNotEmpty ?? false)
                               Text('Code: ${item.itemCode!}'),
-                            if (item.hsnCode?.isNotEmpty ?? false)
-                              Text('HSN: ${item.hsnCode!} • ${item.taxRate}%'),
                             if (item.isStockTracked) ...[
                               const SizedBox(height: 2),
                               Row(

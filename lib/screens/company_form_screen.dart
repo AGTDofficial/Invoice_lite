@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import '../models/company.dart';
-import '../utils/constants.dart';
+
 
 class CompanyFormScreen extends StatefulWidget {
   final Company? company;
@@ -21,35 +21,67 @@ class CompanyFormScreen extends StatefulWidget {
 class _CompanyFormScreenState extends State<CompanyFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _gstController = TextEditingController();
   final _addressController = TextEditingController();
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _stateSearchController = TextEditingController();
 
-  String _registrationStatus = 'Registered';
-  String _dealerType = 'Regular';
   String _selectedState = 'Maharashtra';
-  String? _businessType;
-  DateTime _selectedDate = DateTime.now();
+  String _businessType = 'Other';
+  final DateTime _financialYearStart = DateTime(DateTime.now().month >= 4 
+      ? DateTime.now().year 
+      : DateTime.now().year - 1, 4, 1); // April 1st of current financial year
 
-  final List<String> _states = gstStateCodeMap.values.toList()..sort();
-  bool get isRegistered => _registrationStatus == 'Registered';
+  final List<String> _states = [
+    'Andhra Pradesh',
+    'Arunachal Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+    'Andaman and Nicobar Islands',
+    'Chandigarh',
+    'Dadra and Nagar Haveli and Daman and Diu',
+    'Delhi',
+    'Jammu and Kashmir',
+    'Ladakh',
+    'Lakshadweep',
+    'Puducherry'
+  ]..sort();
   bool get isEditing => widget.company != null;
 
   @override
   void initState() {
     super.initState();
-    _gstController.addListener(_onGstChanged);
     _initializeFields();
   }
 
   @override
   void dispose() {
-    _gstController.removeListener(_onGstChanged);
     _nameController.dispose();
-    _gstController.dispose();
     _addressController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -62,83 +94,57 @@ class _CompanyFormScreenState extends State<CompanyFormScreen> {
     if (widget.company != null) {
       final company = widget.company!;
       _nameController.text = company.name;
-      _gstController.text = company.gstin;
       _addressController.text = company.address;
       _mobileController.text = company.mobileNumber;
       _selectedState = company.businessState;
-      _registrationStatus = company.isRegistered ? 'Registered' : 'Unregistered';
-      _dealerType = company.dealerType;
       _emailController.text = company.email;
       _pincodeController.text = company.pincode;
       _stateSearchController.text = company.businessState;
-      _businessType = company.businessType;
+      _businessType = company.businessType ?? 'Other';
     }
-  }
-
-  void _onGstChanged() {
-    final gstin = _gstController.text;
-    if (gstin.length >= 2) {
-      final code = gstin.substring(0, 2);
-      final state = getStateNameFromGSTCode(code);
-      if (state != null && state != _selectedState) {
-        setState(() {
-          _selectedState = state;
-          _stateSearchController.text = state;
-        });
-      }
-    }
-  }
-
-  String? _validateGst(String? value) {
-    if (!isRegistered) return null;
-    final pattern = RegExp(r'^[0-9A-Z]{15}$');
-    if (value == null || !pattern.hasMatch(value)) {
-      return 'Enter valid 15-char GSTIN in capital letters';
-    }
-    return null;
   }
 
   String? _validateMobile(String? value) {
-    if (value == null || value.isEmpty || value.length != 10) {
-      return 'Enter 10-digit mobile number';
+    if (value == null || value.isEmpty) {
+      return 'Please enter mobile number';
+    }
+    final pattern = RegExp(r'^[0-9]{10,15}$');
+    if (!pattern.hasMatch(value)) {
+      return 'Enter valid 10-15 digit mobile number';
     }
     return null;
   }
 
   Future<void> _saveForm() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-
+    if (!_formKey.currentState!.validate()) return;
 
     final company = Company(
       name: _nameController.text.trim(),
-      gstin: isRegistered ? _gstController.text.trim() : '',
       address: _addressController.text.trim(),
       mobileNumber: _mobileController.text.trim(),
-      businessState: _selectedState,
-      dealerType: isRegistered ? _dealerType : 'Unregistered',
-      isRegistered: isRegistered,
-      financialYearStart: _selectedDate,
-
       email: _emailController.text.trim(),
       pincode: _pincodeController.text.trim(),
+      businessState: _selectedState,
       businessType: _businessType,
+      gstin: '', // Empty string as GST is not required
+      financialYearStart: _financialYearStart,
+      dealerType: 'Regular', // Default value
     );
 
-    final box = Hive.box<Company>('companies');
-    
-    if (widget.companyIndex != null) {
-      await box.putAt(widget.companyIndex!, company);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Company updated successfully')),
-        );
+    try {
+      final box = await Hive.openBox<Company>('companies');
+      if (isEditing) {
+        await box.put(widget.company!.key, company);
+      } else {
+        await box.add(company);
       }
-    } else {
-      await box.add(company);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Company added successfully')),
+          SnackBar(content: Text('Error saving company: $e')),
         );
       }
     }
@@ -170,29 +176,12 @@ class _CompanyFormScreenState extends State<CompanyFormScreen> {
                 const SizedBox(height: 16),
                 
                 _buildDropdownField(
-                  label: 'GST Registration Status',
-                  value: _registrationStatus,
-                  items: ['Registered', 'Unregistered'],
-                  onChanged: (val) => setState(() => _registrationStatus = val!),
+                  label: 'Business Type',
+                  value: _businessType,
+                  items: const ['Retail', 'Wholesale', 'Service', 'Manufacturing', 'Other'],
+                  onChanged: (val) => setState(() => _businessType = val!),
                 ),
                 const SizedBox(height: 16),
-
-                if (isRegistered) ...[
-                  _buildTextField(
-                    _gstController,
-                    'GST Number',
-                    inputFormatters: [UpperCaseTextFormatter()],
-                    validator: _validateGst,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdownField(
-                    label: 'Business Type',
-                    value: _dealerType,
-                    items: ['Regular', 'Composition'],
-                    onChanged: (val) => setState(() => _dealerType = val!),
-                  ),
-                  const SizedBox(height: 16),
-                ],
 
                 _buildTextField(
                   _addressController, 
@@ -241,8 +230,6 @@ class _CompanyFormScreenState extends State<CompanyFormScreen> {
 
                 const Divider(),
                 const SizedBox(height: 16),
-
-
 
                 ElevatedButton(
                   onPressed: _saveForm,
@@ -305,15 +292,4 @@ class _CompanyFormScreenState extends State<CompanyFormScreen> {
   }
 }
 
-class UpperCaseTextFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    return TextEditingValue(
-      text: newValue.text.toUpperCase(),
-      selection: newValue.selection,
-    );
-  }
-}
+

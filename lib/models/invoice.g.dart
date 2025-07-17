@@ -20,40 +20,37 @@ class InvoiceAdapter extends TypeAdapter<Invoice> {
       id: fields[0] as String,
       type: fields[1] as InvoiceType,
       partyName: fields[2] as String,
-      date: fields[3] as DateTime,
-      invoiceNumber: fields[4] as String,
-      taxType: fields[5] as String,
+      date: fields[4] as DateTime,
+      invoiceNumber: fields[5] as String,
       items: (fields[6] as List).cast<InvoiceItem>(),
       total: fields[7] as double,
       notes: fields[8] as String?,
-      discount: fields[9] as double?,
-      roundOff: fields[10] as double?,
-      totalTaxAmount: fields[11] as double?,
-      saleType: fields[12] as String?,
-      originalInvoiceNumber: fields[13] as String?,
-      isReturn: fields[15] as bool,
-      accountKey: fields[14] as int?,
+      discount: fields[9] as double,
+      roundOff: fields[10] as double,
+      saleType: fields[11] as String?,
+      originalInvoiceNumber: fields[12] as String?,
+      isReturn: fields[13] as bool,
+      accountKey: fields[3] as int?,
+      dueDate: fields[14] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Invoice obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.type)
       ..writeByte(2)
       ..write(obj.partyName)
-      ..writeByte(14)
-      ..write(obj.accountKey)
       ..writeByte(3)
-      ..write(obj.date)
+      ..write(obj.accountKey)
       ..writeByte(4)
-      ..write(obj.invoiceNumber)
+      ..write(obj.date)
       ..writeByte(5)
-      ..write(obj.taxType)
+      ..write(obj.invoiceNumber)
       ..writeByte(6)
       ..write(obj.items)
       ..writeByte(7)
@@ -65,13 +62,13 @@ class InvoiceAdapter extends TypeAdapter<Invoice> {
       ..writeByte(10)
       ..write(obj.roundOff)
       ..writeByte(11)
-      ..write(obj.totalTaxAmount)
-      ..writeByte(12)
       ..write(obj.saleType)
-      ..writeByte(13)
+      ..writeByte(12)
       ..write(obj.originalInvoiceNumber)
-      ..writeByte(15)
-      ..write(obj.isReturn);
+      ..writeByte(13)
+      ..write(obj.isReturn)
+      ..writeByte(14)
+      ..write(obj.dueDate);
   }
 
   @override

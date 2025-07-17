@@ -49,37 +49,27 @@ class Item extends HiveObject {
   late String unit;
 
   @HiveField(5)
-  double taxRate = 0.0;
-
-  @HiveField(6)
-  String? hsnCode;
-
-  @HiveField(7)
   double? saleRate;
 
-  @HiveField(8)
+  @HiveField(6)
   double? purchaseRate;
 
-  
-  @HiveField(9)
+  @HiveField(7)
   double openingStock = 0.0;
   
-  @HiveField(10)
+  @HiveField(8)
   double currentStock = 0.0;
   
-  @HiveField(11)
+  @HiveField(9)
   bool isStockTracked = false;
   
-  @HiveField(12)
+  @HiveField(10)
   double minStockLevel = 0.0;
   
-  @HiveField(13)
+  @HiveField(11)
   DateTime? lastUpdated;
   
-  @HiveField(14)
-  String? barcode;
-  
-  @HiveField(15)
+  @HiveField(12)
   String? description;
   
   // For tracking stock movement history
@@ -92,15 +82,13 @@ class Item extends HiveObject {
     this.itemGroup,
     this.itemCode,
     this.unit = 'PCS',
-    this.taxRate = 0.0,
-    this.hsnCode,
     this.saleRate,
     this.purchaseRate,
     this.openingStock = 0.0,
     this.currentStock = 0.0,
     this.isStockTracked = false,
     this.minStockLevel = 0.0,
-    this.barcode,
+
     this.description,
   }) : id = id ?? const Uuid().v4(),
        name = name;
@@ -112,16 +100,16 @@ class Item extends HiveObject {
     String? itemGroup,
     String? itemCode,
     String? unit,
-    double? taxRate,
-    String? hsnCode,
     double? saleRate,
     double? purchaseRate,
     double? openingStock,
     double? currentStock,
     bool? isStockTracked,
     double? minStockLevel,
-    String? barcode,
+
     String? description,
+    String? hsnCode,
+    double? taxRate,
   }) {
     return Item(
       id: id ?? this.id,
@@ -129,15 +117,13 @@ class Item extends HiveObject {
       itemGroup: itemGroup ?? this.itemGroup,
       itemCode: itemCode ?? this.itemCode,
       unit: unit ?? this.unit,
-      taxRate: taxRate ?? this.taxRate,
-      hsnCode: hsnCode ?? this.hsnCode,
       saleRate: saleRate ?? this.saleRate,
       purchaseRate: purchaseRate ?? this.purchaseRate,
       openingStock: openingStock ?? this.openingStock,
       currentStock: currentStock ?? this.currentStock,
       isStockTracked: isStockTracked ?? this.isStockTracked,
       minStockLevel: minStockLevel ?? this.minStockLevel,
-      barcode: barcode ?? this.barcode,
+
       description: description ?? this.description,
     );
   }
@@ -245,9 +231,6 @@ class Item extends HiveObject {
       }
     }
     
-    if (taxRate < 0 || taxRate > 100) {
-      errors.add('Tax rate must be between 0 and 100');
-    }
     
     if (saleRate != null && saleRate! < 0) {
       errors.add('Sale rate cannot be negative');
@@ -277,15 +260,14 @@ class Item extends HiveObject {
         'itemGroup': itemGroup,
         'itemCode': itemCode,
         'unit': unit,
-        'taxRate': taxRate,
-        'hsnCode': hsnCode,
+
         'saleRate': saleRate,
         'purchaseRate': purchaseRate,
         'openingStock': openingStock,
         'currentStock': currentStock,
         'isStockTracked': isStockTracked,
         'minStockLevel': minStockLevel,
-        'barcode': barcode,
+
         'description': description,
         'lastUpdated': lastUpdated?.toIso8601String(),
       };
@@ -298,15 +280,13 @@ class Item extends HiveObject {
       itemGroup: json['itemGroup'] as String?,
       itemCode: json['itemCode'] as String?,
       unit: json['unit'] as String? ?? 'PCS',
-      taxRate: (json['taxRate'] as double?) ?? 0.0,
-      hsnCode: json['hsnCode'] as String?,
+
       saleRate: (json['saleRate'] as double?),
       purchaseRate: (json['purchaseRate'] as double?),
       openingStock: (json['openingStock'] as double?) ?? 0.0,
       currentStock: (json['currentStock'] as double?) ?? 0.0,
       isStockTracked: json['isStockTracked'] as bool? ?? false,
       minStockLevel: (json['minStockLevel'] as double?) ?? 0.0,
-      barcode: json['barcode'] as String?,
       description: json['description'] as String?,
     );
   }

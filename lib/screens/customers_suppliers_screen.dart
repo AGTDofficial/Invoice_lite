@@ -64,8 +64,8 @@ class _CustomersSuppliersScreenState extends State<CustomersSuppliersScreen> wit
           children: [
             if (account.phone.isNotEmpty)
               Text('Phone: ${account.phone}'),
-            if (account.gstinUin != null && account.gstinUin!.isNotEmpty)
-              Text('GSTIN: ${account.gstinUin}'),
+            if (account.panNumber != null && account.panNumber!.isNotEmpty)
+              Text('PAN: ${account.panNumber}'),
             Text(
               'Balance: ${_numberFormat.format(account.balance)}',
               style: TextStyle(
@@ -136,8 +136,7 @@ class _CustomersSuppliersScreenState extends State<CustomersSuppliersScreen> wit
         
         if (account.phone.toLowerCase().contains(searchLower)) return true;
         
-        final gstinUin = account.gstinUin;
-        if (gstinUin != null && gstinUin.toLowerCase().contains(searchLower)) return true;
+        if (account.panNumber?.toLowerCase().contains(searchLower) == true) return true;
         
         return false;
       }).toList();

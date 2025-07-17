@@ -5,7 +5,7 @@ import 'package:email_validator/email_validator.dart';
 
 import '../models/account.dart';
 import '../providers/account_provider.dart';
-import '../constants/indian_states.dart';
+
 
 class AccountFormScreen extends StatefulWidget {
   final Account? account;
@@ -28,15 +28,10 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  final _countryController = TextEditingController();
-  final _stateController = TextEditingController();
-  String _selectedState = ''; // Initialize with empty string
-  final _gstinUinController = TextEditingController();
   final _emailController = TextEditingController();
   final _openingBalanceController = TextEditingController(text: '0.00');
 
   String? _selectedGroup;
-  String? _selectedDealerType;
   bool _isCredit = false;
   bool _isLoading = false;
 
@@ -55,14 +50,6 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
     'Indirect Income',
   ];
 
-  final List<String> _dealerTypes = [
-    'Registered',
-    'Unregistered',
-    'Composition',
-    'Govt. Body',
-    'UIN Holder',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -75,21 +62,14 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
       _nameController.text = account.name;
       _phoneController.text = account.phone;
       _addressController.text = account.address ?? '';
-      _countryController.text = account.country ?? 'India';
-      _stateController.text = account.state ?? '';
-      _selectedState = account.state ?? ''; // Ensure state is not null
-      _gstinUinController.text = account.gstinUin ?? '';
       _emailController.text = account.email ?? '';
       _openingBalanceController.text = account.openingBalance.toStringAsFixed(2);
       _selectedGroup = account.group;
-      _selectedDealerType = account.dealerType;
       _isCredit = account.isCredit;
     } else if (widget.isCustomer) {
       _selectedGroup = 'Sundry Debtor';
-      _countryController.text = 'India';
     } else if (widget.isSupplier) {
       _selectedGroup = 'Sundry Creditor';
-      _countryController.text = 'India';
     }
   }
 
@@ -98,9 +78,6 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
-    _countryController.dispose();
-    _stateController.dispose();
-    _gstinUinController.dispose();
     _emailController.dispose();
     _openingBalanceController.dispose();
     super.dispose();
@@ -122,14 +99,10 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          country: _countryController.text.trim().isEmpty ? null : _countryController.text.trim(),
-          state: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
-          gstinUin: _gstinUinController.text.trim().isEmpty ? null : _gstinUinController.text.trim(),
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           openingBalance: double.tryParse(_openingBalanceController.text) ?? 0.0,
           isCredit: _isCredit,
           group: _selectedGroup ?? 'Sundry Debtor',
-          dealerType: _selectedDealerType,
           isCustomer: widget.isCustomer || _selectedGroup == 'Sundry Debtor',
           isSupplier: widget.isSupplier || _selectedGroup == 'Sundry Creditor',
         );
@@ -142,14 +115,10 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
         existingAccount.name = _nameController.text.trim();
         existingAccount.phone = _phoneController.text.trim();
         existingAccount.address = _addressController.text.trim().isEmpty ? null : _addressController.text.trim();
-        existingAccount.country = _countryController.text.trim().isEmpty ? null : _countryController.text.trim();
-        existingAccount.state = _stateController.text.trim().isEmpty ? null : _stateController.text.trim();
-        existingAccount.gstinUin = _gstinUinController.text.trim().isEmpty ? null : _gstinUinController.text.trim();
         existingAccount.email = _emailController.text.trim().isEmpty ? null : _emailController.text.trim();
         existingAccount.openingBalance = double.tryParse(_openingBalanceController.text) ?? 0.0;
         existingAccount.isCredit = _isCredit;
         existingAccount.group = _selectedGroup ?? 'Sundry Debtor';
-        existingAccount.dealerType = _selectedDealerType;
         existingAccount.isCustomer = widget.isCustomer || _selectedGroup == 'Sundry Debtor';
         existingAccount.isSupplier = widget.isSupplier || _selectedGroup == 'Sundry Creditor';
         
@@ -261,131 +230,6 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
                       alignLabelWithHint: true,
                     ),
                     maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Country and State Row
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Country Dropdown (Fixed to India)
-                      DropdownButtonFormField<String>(
-                        value: 'India',
-                        decoration: const InputDecoration(
-                          labelText: 'Country',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        isExpanded: true,
-                        style: const TextStyle(fontSize: 15.5, color: Colors.black),
-                        icon: const Icon(Icons.arrow_drop_down, size: 20, color: Colors.black54),
-                        dropdownColor: Colors.white,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'India',
-                            child: Text('India', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15.5, color: Colors.black)),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          // No-op since India is the only option
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // State Dropdown
-                      DropdownButtonFormField<String>(
-                        value: _selectedState,
-                        decoration: const InputDecoration(
-                          labelText: 'State *',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        isExpanded: true,
-                        style: const TextStyle(fontSize: 15.5, color: Colors.black),
-                        icon: const Icon(Icons.arrow_drop_down, size: 20, color: Colors.black54),
-                        dropdownColor: Colors.white,
-                        hint: const Text('Select State', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15.5, color: Colors.black54)),
-                        items: [
-                          // Add a default empty value as the first item
-                          const DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            child: Text('Select a state', style: TextStyle(color: Colors.grey)),
-                          ),
-                          // Add all Indian states
-                          ...indianStates.map((state) {
-                            return DropdownMenuItem(
-                              value: state,
-                              child: Text(
-                                state,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 15.5, color: Colors.black),
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a state';
-                          }
-                          return null;
-                        },
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedState = value;
-                              _stateController.text = value;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Dealer Type Dropdown
-                  DropdownButtonFormField<String>(
-                    value: _selectedDealerType,
-                    decoration: const InputDecoration(
-                      labelText: 'Type of Dealer',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _dealerTypes.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedDealerType = value;
-                      });
-                    },
-                    hint: const Text('Select dealer type'),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // GSTIN/UIN
-                  TextFormField(
-                    controller: _gstinUinController,
-                    decoration: const InputDecoration(
-                      labelText: 'GSTIN/UIN',
-                      border: OutlineInputBorder(),
-                      hintText: '22AAAAA0000A1Z5',
-                    ),
-                    keyboardType: TextInputType.text,
-                    textCapitalization: TextCapitalization.characters,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-                      LengthLimitingTextInputFormatter(15),
-                    ],
-                    validator: (value) {
-                      if (value != null && value.isNotEmpty) {
-                        if (value.length != 15) {
-                          return 'GSTIN must be 15 characters';
-                        }
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 16),
                   

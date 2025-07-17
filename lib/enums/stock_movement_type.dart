@@ -19,7 +19,11 @@ enum StockMovementType {
   @HiveField(6)
   productionOut,
   @HiveField(7)
-  adjustment
+  adjustment,
+  @HiveField(8)
+  salesReturn,
+  @HiveField(9)
+  purchaseReturn,
 }
 
 // Generate adapter using build_runner
