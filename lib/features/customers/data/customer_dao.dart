@@ -1,14 +1,12 @@
 import 'package:drift/drift.dart';
-import 'package:invoice_lite/features/customers/data/customer_model.dart';
+import 'package:invoice_lite/core/database/database.dart';
 
 part 'customer_dao.g.dart';
 
 /// Data Access Object for the Customers table
 @DriftAccessor(tables: [Customers])
 class CustomerDao extends DatabaseAccessor<AppDatabase> with _$CustomerDaoMixin {
-  final AppDatabase db;
-
-  CustomerDao(this.db) : super(db);
+  CustomerDao(AppDatabase db) : super(db);
 
   /// Get all customers
   Future<List<Customer>> getAllCustomers() => select(customers).get();
@@ -25,6 +23,27 @@ class CustomerDao extends DatabaseAccessor<AppDatabase> with _$CustomerDaoMixin 
 
   /// Update an existing customer
   Future<bool> updateCustomer(CustomersCompanion entry) => update(customers).replace(entry);
+  
+  /// Convert Customer to CustomersCompanion for update
+  CustomersCompanion toCompanion(Customer customer, [bool forUpdate = false]) {
+    return CustomersCompanion(
+      id: Value(customer.id),
+      name: Value(customer.name),
+      email: Value(customer.email),
+      phone: Value(customer.phone),
+      address: Value(customer.address),
+      city: Value(customer.city),
+      state: Value(customer.state),
+      country: Value(customer.country),
+      pinCode: Value(customer.pinCode),
+      taxId: Value(customer.taxId),
+      type: Value(customer.type),
+      balance: Value(customer.balance),
+      isActive: Value(customer.isActive == 1),
+      updatedAt: Value(DateTime.now()),
+      createdAt: forUpdate ? Value(customer.createdAt) : Value(DateTime.now()),
+    );
+  }
 
   /// Delete a customer
   Future<int> deleteCustomer(int id) => 
@@ -33,11 +52,13 @@ class CustomerDao extends DatabaseAccessor<AppDatabase> with _$CustomerDaoMixin 
   /// Search customers by name, email, or phone
   Future<List<Customer>> searchCustomers(String query) {
     return (select(customers)
-      ..where((tbl) => 
-          tbl.name.like('%$query%') | 
-          tbl.email.like('%$query%') | 
-          tbl.phone.like('%$query%'))
-      ..orderBy([(t) => OrderingTerm(expression: tbl.name)]))
-        .get();
+      ..where((tbl) {
+        final searchTerm = '%$query%';
+        return tbl.name.like(searchTerm) | 
+               tbl.email.like(searchTerm) | 
+               tbl.phone.like(searchTerm);
+      })
+      ..orderBy([(t) => OrderingTerm(expression: t.name)]))
+      .get();
   }
 }

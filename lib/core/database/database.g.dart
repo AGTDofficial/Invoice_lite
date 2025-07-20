@@ -2561,10 +2561,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CustomersTable customers = $CustomersTable(this);
   late final $InvoicesTable invoices = $InvoicesTable(this);
   late final $InvoiceItemsTable invoiceItems = $InvoiceItemsTable(this);
-  late final ItemDao itemDao = ItemDao(this as dynamic /* = invalid*/);
-  late final CustomerDao customerDao =
-      CustomerDao(this as dynamic /* = invalid*/);
-  late final InvoiceDao invoiceDao = InvoiceDao(this as dynamic /* = invalid*/);
+  late final ItemDao itemDao = ItemDao(this as AppDatabase);
+  late final CustomerDao customerDao = CustomerDao(this as AppDatabase);
+  late final InvoiceDao invoiceDao = InvoiceDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:intl/intl.dart';
-import 'package:invoice_lite/core/routes/app_router.dart';
 
-import 'package:invoice_lite/features/invoices/domain/invoice_model.dart';
-import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
-import 'package:invoice_lite/features/invoices/presentation/screens/add_edit_invoice_screen.dart';
-import 'package:invoice_lite/core/theme/app_colors.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../data/item_dao.dart';
+import '../../data/item_model.dart';
 
-class InvoicesListScreen extends ConsumerStatefulWidget {
-  static const String routeName = '/invoices';
+class ItemsListScreen extends ConsumerStatefulWidget {
+  static const String routeName = '/items';
   
-  const InvoicesListScreen({super.key});
+  const ItemsListScreen({super.key});
 
   @override
-  ConsumerState<InvoicesListScreen> createState() => _InvoicesListScreenState();
+  ConsumerState<ItemsListScreen> createState() => _ItemsListScreenState();
 }
 
-class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
+class _ItemsListScreenState extends ConsumerState<ItemsListScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
@@ -28,14 +25,14 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
     super.dispose();
   }
 
-  List<Invoice> _filterInvoices(List<Invoice> invoices, String query) {
-    if (query.isEmpty) return invoices;
+  List<Item> _filterItems(List<Item> items, String query) {
+    if (query.isEmpty) return items;
     
     final lowercaseQuery = query.toLowerCase();
-    return invoices.where((invoice) {
-      return invoice.customerName.toLowerCase().contains(lowercaseQuery) ||
-          'INV-${invoice.invoiceNumber.padLeft(6, '0')}'.toLowerCase().contains(lowercaseQuery) ||
-          invoice.total.toString().contains(query);
+    return items.where((item) {
+      return item.name.toLowerCase().contains(lowercaseQuery) ||
+          item.itemCode.toLowerCase().contains(lowercaseQuery) ||
+          (item.description?.toLowerCase().contains(lowercaseQuery) ?? false);
     }).toList();
   }
 
@@ -58,7 +55,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
         controller: _searchController,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          hintText: 'Search invoices...',
+          hintText: 'Search items...',
           hintStyle: TextStyle(color: theme.hintColor),
           prefixIcon: Icon(Icons.search, color: theme.hintColor),
           suffixIcon: _searchController.text.isNotEmpty
@@ -79,16 +76,16 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final invoicesAsync = ref.watch(invoicesProvider);
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final itemsAsync = ref.watch(itemsProvider);
     
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: _isSearching 
             ? null 
-            : const Text('Invoices', style: TextStyle(fontWeight: FontWeight.w600)),
+            : const Text('Items', style: TextStyle(fontWeight: FontWeight.w600)),
         elevation: 0,
         centerTitle: false,
         actions: [
@@ -122,17 +119,17 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       body: RefreshIndicator(
         color: theme.primaryColor,
         onRefresh: () async {
-          ref.invalidate(invoicesProvider);
+          ref.invalidate(itemsProvider);
         },
-        child: invoicesAsync.when(
-          data: (invoices) {
-            if (invoices.isEmpty) {
+        child: itemsAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
               return _buildEmptyState(theme);
             }
             
-            final filteredInvoices = _filterInvoices(invoices, _searchController.text);
+            final filteredItems = _filterItems(items, _searchController.text);
             
-            if (filteredInvoices.isEmpty) {
+            if (filteredItems.isEmpty) {
               return _buildNoResultsFound(theme);
             }
             
@@ -144,7 +141,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                     child: Row(
                       children: [
                         Text(
-                          '${filteredInvoices.length} ${filteredInvoices.length == 1 ? 'invoice' : 'invoices'} found',
+                          '${filteredItems.length} ${filteredItems.length == 1 ? 'item' : 'items'} found',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.hintColor,
                           ),
@@ -165,11 +162,11 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    itemCount: filteredInvoices.length,
+                    itemCount: filteredItems.length,
                     separatorBuilder: (context, index) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final invoice = filteredInvoices[index];
-                      return _buildInvoiceCard(context, invoice, theme);
+                      final item = filteredItems[index];
+                      return _buildItemCard(context, item, theme);
                     },
                   ),
                 ),
@@ -184,7 +181,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 16),
                 Text(
-                  'Failed to load invoices',
+                  'Failed to load items',
                   style: theme.textTheme.titleMedium?.copyWith(color: Colors.red),
                 ),
                 const SizedBox(height: 8),
@@ -195,7 +192,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(invoicesProvider),
+                  onPressed: () => ref.invalidate(itemsProvider),
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Retry'),
                 ),
@@ -206,27 +203,29 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.pushNamed(context, AddEditInvoiceScreen.routeName);
+          // TODO: Navigate to add item screen
+          // Navigator.pushNamed(context, AddEditItemScreen.routeName);
         },
         icon: const Icon(Icons.add),
-        label: const Text('New Invoice'),
+        label: const Text('New Item'),
         elevation: 2,
       ),
     );
   }
-  
-  Widget _buildInvoiceCard(BuildContext context, Invoice invoice, ThemeData theme) {
-    final dateFormat = DateFormat('MMM dd, yyyy');
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-    final statusColor = _getStatusColor(invoice.status);
-    
+
+  Widget _buildItemCard(BuildContext context, Item item, ThemeData theme) {
     return Material(
       color: theme.cardColor,
       borderRadius: BorderRadius.circular(12),
       elevation: 0,
       child: InkWell(
         onTap: () {
-          AppRouter.navigateToInvoiceDetail(context, invoice.id);
+          // TODO: Navigate to item detail/edit screen
+          // Navigator.pushNamed(
+          //   context,
+          //   AddEditItemScreen.routeName,
+          //   arguments: item.id,
+          // );
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
@@ -239,81 +238,107 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'INV-${invoice.invoiceNumber.padLeft(6, '0')}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: theme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      invoice.status.toUpperCase(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Icon(
+                      Icons.inventory_2_outlined,
+                      color: theme.primaryColor,
+                      size: 24,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '\$${invoice.total.toStringAsFixed(2)}',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.person_outline,
-                    size: 16,
-                    color: theme.hintColor,
-                  ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      invoice.customerName,
-                      style: theme.textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                item.itemCode,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${item.currentStock} ${item.unit}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.hintColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₹${item.saleRate.toStringAsFixed(2)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Stock: ${item.currentStock} ${item.unit}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: item.currentStock <= item.minStockLevel
+                              ? Colors.red
+                              : theme.hintColor,
+                          fontWeight: item.currentStock <= item.minStockLevel
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 14,
-                    color: theme.hintColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Due ${dateFormat.format(invoice.dueDate)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.hintColor,
-                    ),
-                  ),
-                ],
-              ),
+              if (item.description?.isNotEmpty ?? false) ...[
+                const SizedBox(height: 12),
+                Text(
+                  item.description!,
+                  style: theme.textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
-  
+
   Widget _buildShimmerLoading(ThemeData theme) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -338,30 +363,53 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      width: 100,
-                      height: 20,
-                      color: Colors.white,
-                    ),
-                    Container(
-                      width: 60,
-                      height: 20,
-                      decoration: BoxDecoration(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
                       ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: 80,
+                            height: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 60,
+                          height: 12,
+                          color: Colors.white,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: 120,
-                  height: 24,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   height: 14,
@@ -389,20 +437,20 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.receipt_long_outlined,
+              Icons.inventory_2_outlined,
               size: 72,
               color: theme.hintColor.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
-              'No Invoices Yet',
+              'No Items Yet',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your first invoice by tapping the + button below',
+              'Add your first item by tapping the + button below',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.hintColor,
@@ -413,7 +461,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       ),
     );
   }
-  
+
   Widget _buildNoResultsFound(ThemeData theme) {
     return Center(
       child: Padding(
@@ -435,7 +483,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No invoices match your search criteria',
+              'No items match your search criteria',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.hintColor,
@@ -457,25 +505,4 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       ),
     );
   }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return const Color(0xFF10B981); // Green
-      case 'pending':
-        return const Color(0xFFF59E0B); // Amber
-      case 'overdue':
-        return const Color(0xFFEF4444); // Red
-      case 'draft':
-        return const Color(0xFF6B7280); // Gray
-      default:
-        return const Color(0xFF6B7280); // Gray
-    }
-  }
 }
-
-// Provider to fetch all invoices
-final invoicesProvider = FutureProvider<List<Invoice>>((ref) async {
-  final invoiceDao = ref.read(invoiceDaoProvider);
-  return await invoiceDao.getAllInvoices();
-});

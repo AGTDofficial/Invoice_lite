@@ -1,13 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart';
 import 'package:invoice_lite/core/providers/database_provider.dart';
 import 'package:invoice_lite/features/customers/data/customer_dao.dart';
-import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
 import 'package:invoice_lite/features/items/data/item_dao.dart';
-
-// Import generated models and companions
-import 'package:invoice_lite/features/items/data/item_model.dart';
-import 'package:invoice_lite/features/customers/data/customer_model.dart';
-import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
+import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
+import 'package:invoice_lite/core/database/database.dart';
 
 /// A helper class that provides easy access to all DAOs and common database operations
 class DatabaseHelper {
@@ -36,62 +33,45 @@ class DatabaseHelper {
     await items.addItem(ItemsCompanion.insert(
       name: 'Product A',
       itemCode: 'PROD-001',
-      description: 'Sample product A',
+      description: const Value('Sample product A'),
       saleRate: 99.99,
       purchaseRate: 49.99,
-      currentStock: 100,
-      minStockLevel: 10,
-      unit: 'PCS',
     ));
     
     await items.addItem(ItemsCompanion.insert(
       name: 'Product B',
       itemCode: 'PROD-002',
-      description: 'Sample product B',
+      description: const Value('Sample product B'),
       saleRate: 149.99,
       purchaseRate: 79.99,
-      currentStock: 50,
-      minStockLevel: 5,
-      unit: 'PCS',
     ));
     
     // Add sample customers
     await customers.addCustomer(CustomersCompanion.insert(
       name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1234567890',
-      address: '123 Main St',
-      city: 'New York',
-      state: 'NY',
-      country: 'USA',
-      pinCode: '10001',
-      type: 'retail',
-      balance: 0,
+      email: const Value('john@example.com'),
+      phone: const Value('+1234567890'),
+      address: const Value('123 Main St'),
+      city: const Value('New York'),
+      state: const Value('NY'),
     ));
     
     await customers.addCustomer(CustomersCompanion.insert(
       name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+1987654321',
-      address: '456 Oak Ave',
-      city: 'Los Angeles',
-      state: 'CA',
-      country: 'USA',
-      pinCode: '90001',
-      type: 'wholesale',
-      balance: 0,
+      email: const Value('jane@example.com'),
+      phone: const Value('+1987654321'),
+      address: const Value('456 Oak Ave'),
+      city: const Value('Los Angeles'),
+      state: const Value('CA'),
     ));
   }
   
   /// Clear all data from the database (for testing/development)
   Future<void> clearDatabase() async {
     // Delete all invoice items
-    await invoices.deleteInvoiceItems();
-    
-    // Delete all invoices
     final allInvoices = await invoices.getAllInvoices();
     for (final invoice in allInvoices) {
-      await invoices.deleteInvoice(invoice.id);
+      await invoices.deleteInvoiceWithItems(invoice.id);
     }
     
     // Delete all customers

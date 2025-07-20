@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:invoice_lite/core/database/database.dart';
 import 'package:invoice_lite/features/items/data/item_model.dart';
 
 part 'item_dao.g.dart';
@@ -31,9 +32,12 @@ class ItemDao extends DatabaseAccessor<AppDatabase> with _$ItemDaoMixin {
   /// Search items by name or code
   Future<List<Item>> searchItems(String query) {
     return (select(items)
-      ..where((tbl) =>
-          tbl.name.like('%$query%') | tbl.itemCode.like('%$query%'))
-      ..orderBy([(t) => OrderingTerm(expression: tbl.name)]))
+      ..where((tbl) {
+        final nameMatch = tbl.name.like('%$query%');
+        final codeMatch = tbl.itemCode.like('%$query%');
+        return nameMatch | codeMatch;
+      })
+      ..orderBy([(t) => OrderingTerm(expression: t.name)]))
         .get();
   }
 }

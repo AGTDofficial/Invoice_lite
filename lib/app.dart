@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invoice_lite/core/routes/app_router.dart';
+import 'package:invoice_lite/features/customers/presentation/screens/customers_list_screen.dart';
+import 'package:invoice_lite/features/invoices/presentation/screens/invoices_list_screen.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -56,6 +58,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Invoice Lite'),
@@ -68,15 +72,92 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Text('Welcome to Invoice Lite'),
+      body: GridView.count(
+        padding: const EdgeInsets.all(16),
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        children: [
+          _buildMenuCard(
+            context,
+            title: 'Invoices',
+            icon: Icons.receipt_long_outlined,
+            color: Colors.blue,
+            onTap: () {
+              Navigator.of(context).pushNamed(InvoicesListScreen.routeName);
+            },
+          ),
+          _buildMenuCard(
+            context,
+            title: 'Customers',
+            icon: Icons.people_outline,
+            color: Colors.green,
+            onTap: () {
+              AppRouter.navigateToCustomersList(context);
+            },
+          ),
+          _buildMenuCard(
+            context,
+            title: 'Items',
+            icon: Icons.inventory_2_outlined,
+            color: Colors.orange,
+            onTap: () {
+              AppRouter.navigateToItemsList(context);
+            },
+          ),
+          _buildMenuCard(
+            context,
+            title: 'Reports',
+            icon: Icons.bar_chart_outlined,
+            color: Colors.purple,
+            onTap: () {
+              AppRouter.navigateToReports(context);
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.of(context).pushNamed(AddEditInvoiceScreen.routeName);
+          AppRouter.navigateToAddEditInvoice(context);
         },
         icon: const Icon(Icons.add),
         label: const Text('New Invoice'),
+      ),
+    );
+  }
+  
+  Widget _buildMenuCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 32, color: color),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

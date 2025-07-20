@@ -6,7 +6,7 @@ class SearchableDropdown<T> extends StatelessWidget {
   final T? value;
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
-  final FormFieldValidator<T>? validator;
+  final String? Function(T?)? validator;
   final bool isRequired;
   final bool enabled;
   final String? label;
@@ -57,12 +57,12 @@ class SearchableDropdown<T> extends StatelessWidget {
           ),
           const SizedBox(height: 4),
         ],
-        SearchChoices.single(
+        SearchChoices<T>.single(
           value: value,
           items: items,
           hint: hint,
           searchHint: searchHint ?? 'Search $hint',
-          onChanged: enabled ? onChanged : null,
+          onChanged: enabled ? (value) => onChanged(value) : null,
           isExpanded: true,
           displayClearIcon: false,
           underline: Container(
@@ -87,16 +87,8 @@ class SearchableDropdown<T> extends StatelessWidget {
               ),
             );
           },
-          menuItemStyle: MenuItemStyle(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          dropdownSearchDecoration: InputDecoration(
-            hintText: hint,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            prefixIcon: prefixIcon,
-            suffixIcon: const Icon(Icons.arrow_drop_down, size: 24),
-          ),
+          menuConstraints: const BoxConstraints(maxHeight: 350),
+          dialogBox: false,
           isCaseSensitiveSearch: false,
           searchInputDecoration: InputDecoration(
             hintText: searchHint ?? 'Search $hint',
@@ -104,14 +96,6 @@ class SearchableDropdown<T> extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             prefixIcon: const Icon(Icons.search),
           ),
-          selectedValueWidgetFn: (item) {
-            return Text(
-              item?.toString() ?? '',
-              style: theme.textTheme.bodyMedium,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            );
-          },
           onClear: () => onChanged(null),
           clearIcon: const Icon(Icons.clear, size: 18),
           displayItem: (item, selected) {
@@ -123,11 +107,12 @@ class SearchableDropdown<T> extends StatelessWidget {
               selected: selected,
             );
           },
-          validator: validator != null
-              ? (value) => value == null && isRequired
-                  ? 'This field is required'
-                  : validator!(value)
-              : null,
+          validator: (value) {
+            if (value == null && isRequired) {
+              return 'This field is required';
+            }
+            return validator?.call(value);
+          },
         ),
       ],
     );

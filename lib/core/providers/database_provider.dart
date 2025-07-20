@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invoice_lite/core/database/database.dart';
+import 'package:invoice_lite/features/items/data/item_dao.dart';
+import 'package:invoice_lite/features/customers/data/customer_dao.dart';
+import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
 
 /// Provider for the database instance
 final databaseProvider = Provider<AppDatabase>((ref) {

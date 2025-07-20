@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:intl/intl.dart';
-import 'package:invoice_lite/core/routes/app_router.dart';
 
-import 'package:invoice_lite/features/invoices/domain/invoice_model.dart';
-import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
-import 'package:invoice_lite/features/invoices/presentation/screens/add_edit_invoice_screen.dart';
-import 'package:invoice_lite/core/theme/app_colors.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/searchable_dropdown.dart';
+import '../../../../core/routes/app_router.dart';
+import '../../../invoices/presentation/screens/add_edit_invoice_screen.dart';
+import '../../providers/customer_providers.dart';
 
-class InvoicesListScreen extends ConsumerStatefulWidget {
-  static const String routeName = '/invoices';
+// Import the generated model
+import '../../data/customer_model.dart';
+
+// Import the generated part file for the Customer model
+part 'customers_list_screen.g.dart';
+
+class CustomersListScreen extends ConsumerStatefulWidget {
+  static const String routeName = '/customers';
   
-  const InvoicesListScreen({super.key});
+  const CustomersListScreen({super.key});
 
   @override
-  ConsumerState<InvoicesListScreen> createState() => _InvoicesListScreenState();
+  ConsumerState<CustomersListScreen> createState() => _CustomersListScreenState();
 }
 
-class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
+class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
@@ -28,14 +33,14 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
     super.dispose();
   }
 
-  List<Invoice> _filterInvoices(List<Invoice> invoices, String query) {
-    if (query.isEmpty) return invoices;
+  List<Customer> _filterCustomers(List<Customer> customers, String query) {
+    if (query.isEmpty) return customers;
     
     final lowercaseQuery = query.toLowerCase();
-    return invoices.where((invoice) {
-      return invoice.customerName.toLowerCase().contains(lowercaseQuery) ||
-          'INV-${invoice.invoiceNumber.padLeft(6, '0')}'.toLowerCase().contains(lowercaseQuery) ||
-          invoice.total.toString().contains(query);
+    return customers.where((customer) {
+      return customer.name.toLowerCase().contains(lowercaseQuery) ||
+          (customer.phone?.toLowerCase().contains(lowercaseQuery) ?? false) ||
+          (customer.email?.toLowerCase().contains(lowercaseQuery) ?? false);
     }).toList();
   }
 
@@ -58,7 +63,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
         controller: _searchController,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          hintText: 'Search invoices...',
+          hintText: 'Search customers...',
           hintStyle: TextStyle(color: theme.hintColor),
           prefixIcon: Icon(Icons.search, color: theme.hintColor),
           suffixIcon: _searchController.text.isNotEmpty
@@ -79,16 +84,16 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final invoicesAsync = ref.watch(invoicesProvider);
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final customersAsync = ref.watch(customersProvider);
     
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: _isSearching 
             ? null 
-            : const Text('Invoices', style: TextStyle(fontWeight: FontWeight.w600)),
+            : const Text('Customers', style: TextStyle(fontWeight: FontWeight.w600)),
         elevation: 0,
         centerTitle: false,
         actions: [
@@ -122,17 +127,17 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       body: RefreshIndicator(
         color: theme.primaryColor,
         onRefresh: () async {
-          ref.invalidate(invoicesProvider);
+          ref.invalidate(customersProvider);
         },
-        child: invoicesAsync.when(
-          data: (invoices) {
-            if (invoices.isEmpty) {
+        child: customersAsync.when(
+          data: (customers) {
+            if (customers.isEmpty) {
               return _buildEmptyState(theme);
             }
             
-            final filteredInvoices = _filterInvoices(invoices, _searchController.text);
+            final filteredCustomers = _filterCustomers(customers, _searchController.text);
             
-            if (filteredInvoices.isEmpty) {
+            if (filteredCustomers.isEmpty) {
               return _buildNoResultsFound(theme);
             }
             
@@ -144,7 +149,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                     child: Row(
                       children: [
                         Text(
-                          '${filteredInvoices.length} ${filteredInvoices.length == 1 ? 'invoice' : 'invoices'} found',
+                          '${filteredCustomers.length} ${filteredCustomers.length == 1 ? 'customer' : 'customers'} found',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.hintColor,
                           ),
@@ -163,15 +168,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                     ),
                   ),
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    itemCount: filteredInvoices.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final invoice = filteredInvoices[index];
-                      return _buildInvoiceCard(context, invoice, theme);
-                    },
-                  ),
+                  child: _buildCustomerListView(filteredCustomers),
                 ),
               ],
             );
@@ -184,7 +181,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 16),
                 Text(
-                  'Failed to load invoices',
+                  'Failed to load customers',
                   style: theme.textTheme.titleMedium?.copyWith(color: Colors.red),
                 ),
                 const SizedBox(height: 8),
@@ -195,7 +192,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(invoicesProvider),
+                  onPressed: () => ref.invalidate(customersProvider),
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Retry'),
                 ),
@@ -204,116 +201,61 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, AddEditInvoiceScreen.routeName);
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Invoice'),
-        elevation: 2,
-      ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
-  
-  Widget _buildInvoiceCard(BuildContext context, Invoice invoice, ThemeData theme) {
-    final dateFormat = DateFormat('MMM dd, yyyy');
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-    final statusColor = _getStatusColor(invoice.status);
-    
-    return Material(
-      color: theme.cardColor,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 0,
-      child: InkWell(
+
+  Widget _buildCustomerListView(List<Customer> customers) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: customers.length,
+      itemBuilder: (context, index) {
+        final customer = customers[index];
+        return _buildCustomerCard(customer);
+      },
+    );
+  }
+
+  Widget _buildCustomerCard(Customer customer) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
         onTap: () {
-          AppRouter.navigateToInvoiceDetail(context, invoice.id);
+          Navigator.pushNamed(
+            context,
+            AddEditCustomerScreen.routeName,
+            arguments: customer.id.toString(),
+          );
         },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'INV-${invoice.invoiceNumber.padLeft(6, '0')}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      invoice.status.toUpperCase(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '\$${invoice.total.toStringAsFixed(2)}',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.person_outline,
-                    size: 16,
-                    color: theme.hintColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      invoice.customerName,
-                      style: theme.textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 14,
-                    color: theme.hintColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Due ${dateFormat.format(invoice.dueDate)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.hintColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+        leading: CircleAvatar(
+          backgroundColor: theme.primaryColor.withOpacity(0.1),
+          child: Text(
+            customer.name[0].toUpperCase(),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
+        title: Text(
+          customer.name,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (customer.phone != null) Text(customer.phone!),
+            if (customer.email != null) Text(customer.email!),
+          ],
+        ),
+        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }
-  
+
   Widget _buildShimmerLoading(ThemeData theme) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -338,12 +280,33 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      width: 100,
-                      height: 20,
-                      color: Colors.white,
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: 100,
+                            height: 12,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
                     ),
                     Container(
                       width: 60,
@@ -355,13 +318,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: 120,
-                  height: 24,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   height: 14,
@@ -389,20 +346,20 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.receipt_long_outlined,
+              Icons.people_alt_outlined,
               size: 72,
               color: theme.hintColor.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
-              'No Invoices Yet',
+              'No Customers Yet',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your first invoice by tapping the + button below',
+              'Add your first customer by tapping the + button below',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.hintColor,
@@ -413,7 +370,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       ),
     );
   }
-  
+
   Widget _buildNoResultsFound(ThemeData theme) {
     return Center(
       child: Padding(
@@ -435,7 +392,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No invoices match your search criteria',
+              'No customers match your search criteria',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.hintColor,
@@ -457,25 +414,4 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       ),
     );
   }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return const Color(0xFF10B981); // Green
-      case 'pending':
-        return const Color(0xFFF59E0B); // Amber
-      case 'overdue':
-        return const Color(0xFFEF4444); // Red
-      case 'draft':
-        return const Color(0xFF6B7280); // Gray
-      default:
-        return const Color(0xFF6B7280); // Gray
-    }
-  }
 }
-
-// Provider to fetch all invoices
-final invoicesProvider = FutureProvider<List<Invoice>>((ref) async {
-  final invoiceDao = ref.read(invoiceDaoProvider);
-  return await invoiceDao.getAllInvoices();
-});

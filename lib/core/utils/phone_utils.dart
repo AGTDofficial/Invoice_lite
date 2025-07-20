@@ -7,7 +7,9 @@ class PhoneUtils {
   static bool isValidPhoneNumber(String phoneNumber, {String? countryCode}) {
     try {
       final phone = PhoneNumber.parse(phoneNumber);
-      return phone.validate();
+      // The phone number is considered valid if parsing succeeds
+      // and the phone number has a valid format
+      return phone.isValid();
     } catch (e) {
       return false;
     }

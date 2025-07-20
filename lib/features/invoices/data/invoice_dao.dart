@@ -1,14 +1,15 @@
 import 'package:drift/drift.dart';
+import 'package:invoice_lite/core/database/database.dart';
 import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
+import 'package:invoice_lite/features/items/data/item_model.dart';
+import 'package:invoice_lite/features/customers/data/customer_model.dart';
 
 part 'invoice_dao.g.dart';
 
 /// Data Access Object for the Invoices table
-@DriftAccessor(tables: [Invoices, InvoiceItems])
+@DriftAccessor(tables: [Invoices, InvoiceItems, Items, Customers])
 class InvoiceDao extends DatabaseAccessor<AppDatabase> with _$InvoiceDaoMixin {
-  final AppDatabase db;
-
-  InvoiceDao(this.db) : super(db);
+  InvoiceDao(AppDatabase db) : super(db);
 
   /// Get all invoices
   Future<List<Invoice>> getAllInvoices() => select(invoices).get();
@@ -83,33 +84,33 @@ class InvoiceDao extends DatabaseAccessor<AppDatabase> with _$InvoiceDaoMixin {
   /// Search invoices by number or customer name
   Future<List<Invoice>> searchInvoices(String query) {
     return (select(invoices)
-      ..where((tbl) => 
-          tbl.invoiceNumber.like('%$query%') |
-          // Note: This would ideally join with the customers table for better search
-          const Constant(false).equals(true)) // Placeholder for customer name search
+      ..where((tbl) => tbl.invoiceNumber.like('%$query%'))
       ..orderBy([(t) => OrderingTerm.desc(t.invoiceDate)]))
         .get();
   }
 
+  /// Get the financial year range (e.g., 24-25 for 2024-25)
+  String _getFinancialYearRange() {
+    final now = DateTime.now();
+    final currentYear = now.year;
+    final nextYear = now.year + 1;
+    
+    if (now.month >= 4) {
+      // April to December - current year to next year (e.g., 24-25)
+      final startYear = (currentYear % 100).toString().padLeft(2, '0');
+      final endYear = (nextYear % 100).toString().padLeft(2, '0');
+      return '$startYear-$endYear';
+    } else {
+      // January to March - previous year to current year (e.g., 23-24)
+      final startYear = ((currentYear - 1) % 100).toString().padLeft(2, '0');
+      final endYear = (currentYear % 100).toString().padLeft(2, '0');
+    }
+  }
+
   /// Get the next available invoice number
   Future<String> getNextInvoiceNumber() async {
-    // This is a simple implementation that gets the max invoice number and increments it
-    // You might want to implement a more sophisticated numbering system
-    final maxInvoice = await selectOnly(invoices)
-      ..addColumns([invoices.invoiceNumber])
-      ..orderBy([OrderByTerm.desc(invoices.id)])
-      ..limit(1);
-
-    final result = await maxInvoice.getSingleOrNull();
+    return _generateInvoiceNumber();
     
-    if (result == null) {
-      // First invoice
-      return 'INV-${DateTime.now().year}-0001';
-    }
-
-    // Extract the number part and increment it
-    final parts = result.read(invoices.invoiceNumber)!.split('-');
-    final number = int.tryParse(parts.last) ?? 0;
-    return 'INV-${DateTime.now().year}-${(number + 1).toString().padLeft(4, '0')}';
+    return '${prefix}${nextNumber.toString().padLeft(padding, '0')}';
   }
 }

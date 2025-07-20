@@ -3,7 +3,7 @@
 part of 'invoice_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$InvoiceDaoMixin on DatabaseAccessor<dynamic /* = invalid*/ > {
+mixin _$InvoiceDaoMixin on DatabaseAccessor<AppDatabase> {
   $CustomersTable get customers => attachedDatabase.customers;
   $InvoicesTable get invoices => attachedDatabase.invoices;
   $ItemsTable get items => attachedDatabase.items;
