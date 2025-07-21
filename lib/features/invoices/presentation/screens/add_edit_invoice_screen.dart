@@ -611,6 +611,7 @@ class _AddEditInvoiceScreenState extends ConsumerState<AddEditInvoiceScreen> {
                     },
                     prefixIcon: const Icon(Icons.person_outline),
                   );
+                },
               ),
               const SizedBox(height: 20),
               
@@ -903,7 +904,18 @@ class _AddEditInvoiceScreenState extends ConsumerState<AddEditInvoiceScreen> {
             InvoiceItemsCompanion.insert(
               invoiceId: invoiceId,
               itemId: item.id,
-        );
+              description: Value(item.description ?? ''),
+              quantity: item.quantity,
+              unitPrice: item.saleRate,
+              discountPercent: 0,
+              taxPercent: _taxRate,
+              amount: item.saleRate * item.quantity,
+              discountAmount: 0,
+              taxAmount: (item.saleRate * item.quantity) * (_taxRate / 100),
+              total: (item.saleRate * item.quantity) * (1 + (_taxRate / 100)),
+            ),
+          );
+        }
         
         // Show success message
         if (mounted) {

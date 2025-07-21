@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:invoice_lite/core/database/database.dart';
+import 'package:invoice_lite/features/customers/data/customer_model.dart';
 
 part 'customer_dao.g.dart';
 
@@ -39,7 +40,7 @@ class CustomerDao extends DatabaseAccessor<AppDatabase> with _$CustomerDaoMixin 
       taxId: Value(customer.taxId),
       type: Value(customer.type),
       balance: Value(customer.balance),
-      isActive: Value(customer.isActive == 1),
+      isActive: Value(customer.isActive),
       updatedAt: Value(DateTime.now()),
       createdAt: forUpdate ? Value(customer.createdAt) : Value(DateTime.now()),
     );

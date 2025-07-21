@@ -27,6 +27,9 @@ class Customers extends Table {
   // Account balance (positive means customer owes money, negative means credit)
   RealColumn get balance => real().withDefault(const Constant(0))();
   
+  // Active status
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  
   // Timestamps
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();

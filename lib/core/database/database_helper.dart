@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import 'package:invoice_lite/core/providers/database_provider.dart';
 import 'package:invoice_lite/features/customers/data/customer_dao.dart';
+import 'package:invoice_lite/features/customers/data/customer_model.dart';
 import 'package:invoice_lite/features/items/data/item_dao.dart';
+import 'package:invoice_lite/features/items/data/item_model.dart';
 import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
 import 'package:invoice_lite/core/database/database.dart';
 

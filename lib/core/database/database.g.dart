@@ -637,6 +637,16 @@ class $CustomersTable extends Customers
       type: DriftSqlType.double,
       requiredDuringInsert: false,
       defaultValue: const Constant(0));
+  static const VerificationMeta _isActiveMeta =
+      const VerificationMeta('isActive');
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+      'is_active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
+      defaultValue: const Constant(true));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -667,6 +677,7 @@ class $CustomersTable extends Customers
         taxId,
         type,
         balance,
+        isActive,
         createdAt,
         updatedAt
       ];
@@ -729,6 +740,10 @@ class $CustomersTable extends Customers
       context.handle(_balanceMeta,
           balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta));
     }
+    if (data.containsKey('is_active')) {
+      context.handle(_isActiveMeta,
+          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -774,6 +789,8 @@ class $CustomersTable extends Customers
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
       balance: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}balance'])!,
+      isActive: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -800,6 +817,7 @@ class Customer extends DataClass implements Insertable<Customer> {
   final String? taxId;
   final String type;
   final double balance;
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Customer(
@@ -815,6 +833,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       this.taxId,
       required this.type,
       required this.balance,
+      required this.isActive,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -846,6 +865,7 @@ class Customer extends DataClass implements Insertable<Customer> {
     }
     map['type'] = Variable<String>(type);
     map['balance'] = Variable<double>(balance);
+    map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -873,6 +893,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           taxId == null && nullToAbsent ? const Value.absent() : Value(taxId),
       type: Value(type),
       balance: Value(balance),
+      isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -894,6 +915,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       taxId: serializer.fromJson<String?>(json['taxId']),
       type: serializer.fromJson<String>(json['type']),
       balance: serializer.fromJson<double>(json['balance']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -914,6 +936,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       'taxId': serializer.toJson<String?>(taxId),
       'type': serializer.toJson<String>(type),
       'balance': serializer.toJson<double>(balance),
+      'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -932,6 +955,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           Value<String?> taxId = const Value.absent(),
           String? type,
           double? balance,
+          bool? isActive,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Customer(
@@ -947,6 +971,7 @@ class Customer extends DataClass implements Insertable<Customer> {
         taxId: taxId.present ? taxId.value : this.taxId,
         type: type ?? this.type,
         balance: balance ?? this.balance,
+        isActive: isActive ?? this.isActive,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -964,6 +989,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       taxId: data.taxId.present ? data.taxId.value : this.taxId,
       type: data.type.present ? data.type.value : this.type,
       balance: data.balance.present ? data.balance.value : this.balance,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -984,6 +1010,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           ..write('taxId: $taxId, ')
           ..write('type: $type, ')
           ..write('balance: $balance, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -992,7 +1019,7 @@ class Customer extends DataClass implements Insertable<Customer> {
 
   @override
   int get hashCode => Object.hash(id, name, email, phone, address, city, state,
-      country, pinCode, taxId, type, balance, createdAt, updatedAt);
+      country, pinCode, taxId, type, balance, isActive, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1009,6 +1036,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           other.taxId == this.taxId &&
           other.type == this.type &&
           other.balance == this.balance &&
+          other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1026,6 +1054,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   final Value<String?> taxId;
   final Value<String> type;
   final Value<double> balance;
+  final Value<bool> isActive;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const CustomersCompanion({
@@ -1041,6 +1070,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     this.taxId = const Value.absent(),
     this.type = const Value.absent(),
     this.balance = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -1057,6 +1087,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     this.taxId = const Value.absent(),
     this.type = const Value.absent(),
     this.balance = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : name = Value(name);
@@ -1073,6 +1104,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Expression<String>? taxId,
     Expression<String>? type,
     Expression<double>? balance,
+    Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -1089,6 +1121,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       if (taxId != null) 'tax_id': taxId,
       if (type != null) 'type': type,
       if (balance != null) 'balance': balance,
+      if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -1107,6 +1140,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       Value<String?>? taxId,
       Value<String>? type,
       Value<double>? balance,
+      Value<bool>? isActive,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt}) {
     return CustomersCompanion(
@@ -1122,6 +1156,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       taxId: taxId ?? this.taxId,
       type: type ?? this.type,
       balance: balance ?? this.balance,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -1166,6 +1201,9 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     if (balance.present) {
       map['balance'] = Variable<double>(balance.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1190,6 +1228,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
           ..write('taxId: $taxId, ')
           ..write('type: $type, ')
           ..write('balance: $balance, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2920,6 +2959,7 @@ typedef $$CustomersTableCreateCompanionBuilder = CustomersCompanion Function({
   Value<String?> taxId,
   Value<String> type,
   Value<double> balance,
+  Value<bool> isActive,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -2936,6 +2976,7 @@ typedef $$CustomersTableUpdateCompanionBuilder = CustomersCompanion Function({
   Value<String?> taxId,
   Value<String> type,
   Value<double> balance,
+  Value<bool> isActive,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -3004,6 +3045,9 @@ class $$CustomersTableFilterComposer
 
   ColumnFilters<double> get balance => $composableBuilder(
       column: $table.balance, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -3078,6 +3122,9 @@ class $$CustomersTableOrderingComposer
   ColumnOrderings<double> get balance => $composableBuilder(
       column: $table.balance, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -3129,6 +3176,9 @@ class $$CustomersTableAnnotationComposer
 
   GeneratedColumn<double> get balance =>
       $composableBuilder(column: $table.balance, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3193,6 +3243,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             Value<String?> taxId = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<double> balance = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -3209,6 +3260,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             taxId: taxId,
             type: type,
             balance: balance,
+            isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -3225,6 +3277,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             Value<String?> taxId = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<double> balance = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -3241,6 +3294,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             taxId: taxId,
             type: type,
             balance: balance,
+            isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),

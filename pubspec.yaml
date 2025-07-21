@@ -38,7 +38,9 @@ dependencies:
   path: ^1.8.3
   shared_preferences: ^2.2.3
   
-  # Form Handling - Using custom validation
+  # Form Handling
+  yaml_edit: ^2.0.0
+  yaml: ^3.1.1
   
   # PDF Generation & Sharing
   pdf: ^3.10.7
@@ -57,7 +59,7 @@ dependencies:
   get_it: ^7.6.7
   
   # Utilities
-  intl: ^0.18.1  # Required by syncfusion_flutter_charts and compatible with form_builder_validators 9.1.0
+  intl: ^0.18.1  # Compatible with syncfusion_flutter_charts
   uuid: ^4.3.3
   equatable: ^2.0.5
   collection: ^1.18.0

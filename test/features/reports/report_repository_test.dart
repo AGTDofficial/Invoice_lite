@@ -43,15 +43,15 @@ void main() {
     final customer1 = await customerDao.addCustomer(
       CustomersCompanion.insert(
         name: 'Test Customer 1',
-        email: Value('customer1@test.com'),
-        phone: Value('1234567890'),
-        address: Value('Test Address 1'),
-        city: Value('Test City'),
-        state: Value('Test State'),
-        country: Value('India'),
-        pinCode: Value('123456'),
-        taxId: Value('GST123'),
-        type: Value('retail'),
+        email: const Value('customer1@test.com'),
+        phone: const Value('1234567890'),
+        address: const Value('Test Address 1'),
+        city: const Value('Test City'),
+        state: const Value('Test State'),
+        country: const Value('India'),
+        pinCode: const Value('123456'),
+        taxId: const Value('GST123'),
+        type: const Value('retail'),
         balance: const Value(0.0),
         createdAt: Value(DateTime.now()),
         updatedAt: Value(DateTime.now()),
@@ -59,7 +59,7 @@ void main() {
     );
 
     final customer2 = await customerDao.addCustomer(
-      CustomersCompanion.insert(
+      const CustomersCompanion.insert(
         name: 'Test Customer 2',
         email: Value('customer2@test.com'),
         phone: Value('0987654321'),
@@ -70,10 +70,9 @@ void main() {
         pinCode: Value('654321'),
         taxId: Value('GST456'),
         type: Value('retail'),
-        balance: const Value(0.0),
-        createdAt: Value(DateTime.now()),
-        updatedAt: Value(DateTime.now()),
-      ),
+        balance: Value(0.0),
+      )..createdAt = Value(DateTime.now())
+       ..updatedAt = Value(DateTime.now()),
     );
 
     // Add items
