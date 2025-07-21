@@ -9,6 +9,9 @@ import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
 import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
 import 'package:invoice_lite/features/invoices/presentation/screens/select_item_screen.dart';
 
+import '../../../../core/database/database.dart' show Customer;
+import '../../../../core/providers/database_provider.dart';
+
 // Import the SelectedItem class from select_item_screen.dart
 export 'select_item_screen.dart' show SelectedItem;
 

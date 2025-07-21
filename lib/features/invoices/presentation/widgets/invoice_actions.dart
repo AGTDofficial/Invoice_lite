@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
 import 'package:invoice_lite/features/invoices/data/pdf_invoice_service.dart';
 import 'package:invoice_lite/features/customers/data/customer_model.dart';
 import 'package:invoice_lite/features/items/data/item_model.dart';
+
+import '../../../../core/database/database.dart';
 
 class InvoiceActions extends ConsumerWidget {
   final Invoice invoice;
@@ -95,7 +98,7 @@ class InvoiceActions extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall,
+          style: Theme.of(context as BuildContext).textTheme.labelSmall,
         ),
       ],
     );

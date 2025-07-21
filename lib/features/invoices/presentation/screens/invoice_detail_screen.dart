@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:invoice_lite/core/theme/app_colors.dart';
-import 'package:invoice_lite/features/customers/domain/customer_model.dart';
+import 'package:invoice_lite/features/customers/data/customer_model.dart';
 import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
-import 'package:invoice_lite/features/invoices/domain/invoice_model.dart';
+import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
 import 'package:invoice_lite/features/invoices/presentation/widgets/invoice_actions.dart';
+
+import '../../../../core/database/database.dart';
+import '../../../../core/providers/database_provider.dart';
 
 class InvoiceDetailScreen extends ConsumerStatefulWidget {
   static const String routeName = '/invoices/detail';

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 import 'package:drift/drift.dart' show Value;
 
+import '../../../../core/database/database.dart' show Customer;
 import '../../../../core/utils/form_validators.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_text_field.dart';
@@ -46,7 +47,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
     // If editing, load customer data
     if (widget.customerId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadCustomerData();
+        _loadCustomer();
       });
     }
   }
@@ -198,9 +199,14 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) return null;
     
+    // First check with our basic phone validation
+    final basicValidation = FormValidators.phoneNumber(value, errorText: 'Please enter a valid phone number');
+    if (basicValidation != null) return basicValidation;
+    
+    // Then try more specific validation with phone_numbers_parser
     try {
       final phone = PhoneNumber.parse(value);
-      if (!phone.isValid()) {  // Removed the PhoneNumberType.mobile parameter
+      if (!phone.isValid()) {
         return 'Please enter a valid phone number';
       }
       return null;
@@ -279,7 +285,10 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                     prefixIcon: Icons.person_outline,
                     keyboardType: TextInputType.name,
                     textCapitalization: TextCapitalization.words,
-                    validator: (value) => FormValidators.required(value, errorText: 'Name is required'),
+                    validator: (value) => FormValidators.combine([
+                      (v) => FormValidators.required(v, errorText: 'Name is required'),
+                      (v) => FormValidators.maxLength(v, 100, errorText: 'Maximum 100 characters'),
+                    ])(value),
                   ),
                   const SizedBox(height: 16),
                   
@@ -290,7 +299,10 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                     hint: 'Enter phone number with country code',
                     prefixIcon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
-                    validator: _validatePhone,
+                    validator: (value) => FormValidators.combine([
+                      _validatePhone,
+                      (v) => FormValidators.maxLength(v, 20, errorText: 'Maximum 20 characters'),
+                    ])(value),
                   ),
                   const SizedBox(height: 16),
                   
@@ -301,7 +313,10 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                     hint: 'Enter email address',
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) => FormValidators.email(value, errorText: 'Enter a valid email'),
+                    validator: (value) => FormValidators.combine([
+                      (v) => FormValidators.email(v, errorText: 'Enter a valid email'),
+                      (v) => FormValidators.maxLength(v, 100, errorText: 'Maximum 100 characters'),
+                    ])(value),
                   ),
                   
                   // Additional Information
@@ -334,14 +349,21 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                     prefixIcon: Icons.receipt_long_outlined,
                     textCapitalization: TextCapitalization.characters,
                     maxLength: 15,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return null;
-                      final gstinRegex = RegExp(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$');
-                      if (!gstinRegex.hasMatch(value)) {
-                        return 'Invalid GSTIN format';
-                      }
-                      return null;
-                    },
+                    validator: (value) => FormValidators.combine([
+                      // Allow empty
+                      (v) => v == null || v.isEmpty ? null : null,
+                      // Validate GSTIN format if not empty
+                      (v) {
+                        if (v == null || v.isEmpty) return null;
+                        final gstinRegex = RegExp(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$');
+                        if (!gstinRegex.hasMatch(v)) {
+                          return 'Invalid GSTIN format';
+                        }
+                        return null;
+                      },
+                      // Max length check
+                      (v) => FormValidators.maxLength(v, 15, errorText: 'Maximum 15 characters'),
+                    ])(value),
                   ),
                 ],
               ),

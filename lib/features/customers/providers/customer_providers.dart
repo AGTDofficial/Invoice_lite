@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invoice_lite/core/database/database.dart';
 import 'package:invoice_lite/features/customers/data/customer_dao.dart';
 
+import '../../../core/providers/database_provider.dart';
+
 /// Provider for the customer DAO
 final customerDaoProvider = Provider<CustomerDao>((ref) {
   final db = ref.watch(databaseProvider);

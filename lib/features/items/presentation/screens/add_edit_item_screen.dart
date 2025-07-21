@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/form_validators.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../data/item_dao.dart';
 import '../../data/item_model.dart';
@@ -271,10 +271,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                     prefixIcon: Icons.inventory_2_outlined,
                     keyboardType: TextInputType.name,
                     textCapitalization: TextCapitalization.words,
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(errorText: 'Name is required'),
-                      FormBuilderValidators.maxLength(100, errorText: 'Maximum 100 characters'),
-                    ]),
+                    validator: (value) => FormValidators.combine([
+                      (v) => FormValidators.required(v, errorText: 'Name is required'),
+                      (v) => FormValidators.maxLength(v, 100, errorText: 'Maximum 100 characters'),
+                    ])(value),
                   ),
                   const SizedBox(height: 16),
                   
@@ -285,10 +285,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                     hint: 'Enter item code',
                     prefixIcon: Icons.qr_code,
                     textCapitalization: TextCapitalization.characters,
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(errorText: 'Item code is required'),
-                      FormBuilderValidators.maxLength(50, errorText: 'Maximum 50 characters'),
-                    ]),
+                    validator: (value) => FormValidators.combine([
+                      (v) => FormValidators.required(v, errorText: 'Item code is required'),
+                      (v) => FormValidators.maxLength(v, 50, errorText: 'Maximum 50 characters'),
+                    ])(value),
                   ),
                   const SizedBox(height: 16),
                   
@@ -326,10 +326,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                           ],
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(errorText: 'Sale rate is required'),
-                            FormBuilderValidators.numeric(errorText: 'Enter a valid amount'),
-                          ]),
+                          validator: (value) => FormValidators.combine([
+                            (v) => FormValidators.required(v, errorText: 'Sale rate is required'),
+                            (v) => FormValidators.number(v, errorText: 'Enter a valid amount'),
+                          ])(value),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -345,9 +345,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                           ],
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.numeric(errorText: 'Enter a valid amount'),
-                          ]),
+                          validator: (value) => FormValidators.number(
+                            value,
+                            errorText: 'Enter a valid amount',
+                          ),
                         ),
                       ),
                     ],
@@ -377,9 +378,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                           ],
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.numeric(errorText: 'Enter a valid number'),
-                          ]),
+                          validator: (value) => FormValidators.number(
+                            value,
+                            errorText: 'Enter a valid number',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -395,9 +397,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                           ],
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.numeric(errorText: 'Enter a valid number'),
-                          ]),
+                          validator: (value) => FormValidators.number(
+                            value,
+                            errorText: 'Enter a valid number',
+                          ),
                         ),
                       ),
                     ],
@@ -417,9 +420,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                         builder: (context) => _buildUnitSelector(theme),
                       );
                     },
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(errorText: 'Unit is required'),
-                    ]),
+                    validator: (value) => FormValidators.required(
+                      value,
+                      errorText: 'Unit is required',
+                    ),
                   ),
                 ],
               ),

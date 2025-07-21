@@ -104,13 +104,32 @@ class InvoiceDao extends DatabaseAccessor<AppDatabase> with _$InvoiceDaoMixin {
       // January to March - previous year to current year (e.g., 23-24)
       final startYear = ((currentYear - 1) % 100).toString().padLeft(2, '0');
       final endYear = (currentYear % 100).toString().padLeft(2, '0');
+      return '$startYear-$endYear';
     }
   }
 
   /// Get the next available invoice number
   Future<String> getNextInvoiceNumber() async {
-    return _generateInvoiceNumber();
+    final financialYear = _getFinancialYearRange();
+    const prefix = 'INV/';
+    const padding = 4;
     
-    return '${prefix}${nextNumber.toString().padLeft(padding, '0')}';
+    // Get the highest invoice number for the current financial year
+    final invoiceNumbers = await (select(invoices)
+      ..where((tbl) => tbl.invoiceNumber.contains(financialYear))
+      ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+      .get();
+    
+    int nextNumber = 1;
+    if (invoiceNumbers.isNotEmpty) {
+      // Extract the numeric part of the last invoice number and increment
+      final lastNumberStr = invoiceNumbers.first.invoiceNumber
+          .split('/')
+          .last
+          .split('-')[0];
+      nextNumber = (int.tryParse(lastNumberStr) ?? 0) + 1;
+    }
+    
+    return '$prefix${nextNumber.toString().padLeft(padding, '0')}-$financialYear';
   }
 }

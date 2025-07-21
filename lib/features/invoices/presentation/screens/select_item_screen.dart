@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invoice_lite/core/widgets/quantity_selector.dart';
 import 'package:invoice_lite/features/items/data/item_dao.dart';
 import 'package:invoice_lite/features/items/data/item_model.dart';
-import 'package:invoice_lite/features/items/presentation/providers/items_provider.dart';
+import 'package:invoice_lite/features/items/data/items_provider.dart';
+
+import '../../../../core/database/database.dart';
 
 // A wrapper class to track selected items with quantities
 class SelectedItem {

@@ -2,17 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../../core/database/database.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/searchable_dropdown.dart';
 import '../../../../core/routes/app_router.dart';
 import '../../../invoices/presentation/screens/add_edit_invoice_screen.dart';
 import '../../providers/customer_providers.dart';
-
-// Import the generated model
 import '../../data/customer_model.dart';
-
-// Import the generated part file for the Customer model
-part 'customers_list_screen.g.dart';
+import '../screens/add_edit_customer_screen.dart';
 
 class CustomersListScreen extends ConsumerStatefulWidget {
   static const String routeName = '/customers';
@@ -38,9 +35,13 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
     
     final lowercaseQuery = query.toLowerCase();
     return customers.where((customer) {
-      return customer.name.toLowerCase().contains(lowercaseQuery) ||
-          (customer.phone?.toLowerCase().contains(lowercaseQuery) ?? false) ||
-          (customer.email?.toLowerCase().contains(lowercaseQuery) ?? false);
+      final name = customer.name.toLowerCase();
+      final phone = customer.phone?.toLowerCase() ?? '';
+      final email = customer.email?.toLowerCase() ?? '';
+      
+      return name.contains(lowercaseQuery) ||
+          phone.contains(lowercaseQuery) ||
+          email.contains(lowercaseQuery);
     }).toList();
   }
 
@@ -85,8 +86,12 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final customersAsync = ref.watch(customersListProvider);
     final theme = Theme.of(context);
-    final customersAsync = ref.watch(customersProvider);
+    final filteredCustomers = _filterCustomers(
+      customersAsync.value ?? [],
+      _searchController.text,
+    );
     
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
@@ -127,7 +132,7 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
       body: RefreshIndicator(
         color: theme.primaryColor,
         onRefresh: () async {
-          ref.invalidate(customersProvider);
+          ref.invalidate(customersListProvider);
         },
         child: customersAsync.when(
           data: (customers) {
@@ -192,7 +197,7 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(customersProvider),
+                  onPressed: () => ref.invalidate(customerProvider),
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Retry'),
                 ),
@@ -216,8 +221,23 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
     );
   }
 
+  Widget _buildFloatingActionButton() {
+    return FloatingActionButton(
+      onPressed: () {
+        Navigator.pushNamed(
+          context,
+          AddEditCustomerScreen.routeName,
+          arguments: null, // No customerId when adding a new customer
+        );
+      },
+      child: const Icon(Icons.add),
+    );
+  }
+
   Widget _buildCustomerCard(Customer customer) {
     final theme = Theme.of(context);
+    final name = customer.name.isNotEmpty ? customer.name : 'Unnamed Customer';
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
@@ -231,7 +251,7 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
         leading: CircleAvatar(
           backgroundColor: theme.primaryColor.withOpacity(0.1),
           child: Text(
-            customer.name[0].toUpperCase(),
+            name[0].toUpperCase(),
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.primaryColor,
               fontWeight: FontWeight.bold,
@@ -239,7 +259,7 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
           ),
         ),
         title: Text(
-          customer.name,
+          name,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -247,8 +267,10 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (customer.phone != null) Text(customer.phone!),
-            if (customer.email != null) Text(customer.email!),
+            if (customer.phone?.isNotEmpty ?? false) 
+              Text(customer.phone!),
+            if (customer.email?.isNotEmpty ?? false) 
+              Text(customer.email!),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -339,6 +361,14 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
+    final hintColor = theme.hintColor.withOpacity(0.5);
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    ) ?? const TextStyle(fontWeight: FontWeight.w600);
+    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: hintColor,
+    ) ?? TextStyle(color: hintColor);
+    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -348,22 +378,18 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
             Icon(
               Icons.people_alt_outlined,
               size: 72,
-              color: theme.hintColor.withOpacity(0.5),
+              color: hintColor,
             ),
             const SizedBox(height: 16),
             Text(
               'No Customers Yet',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: titleStyle,
             ),
             const SizedBox(height: 8),
             Text(
               'Add your first customer by tapping the + button below',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.hintColor,
-              ),
+              style: bodyStyle,
             ),
           ],
         ),
@@ -372,6 +398,14 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
   }
 
   Widget _buildNoResultsFound(ThemeData theme) {
+    final hintColor = theme.hintColor?.withOpacity(0.5) ?? Colors.grey.withOpacity(0.5);
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    ) ?? const TextStyle(fontWeight: FontWeight.w600);
+    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: hintColor,
+    ) ?? TextStyle(color: hintColor);
+    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -381,22 +415,17 @@ class _CustomersListScreenState extends ConsumerState<CustomersListScreen> {
             Icon(
               Icons.search_off_rounded,
               size: 72,
-              color: theme.hintColor.withOpacity(0.5),
+              color: hintColor,
             ),
             const SizedBox(height: 16),
             Text(
               'No Results Found',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: titleStyle,
             ),
             const SizedBox(height: 8),
             Text(
-              'No customers match your search criteria',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.hintColor,
-              ),
+              'Try a different search term',
+              style: bodyStyle,
             ),
             const SizedBox(height: 16),
             if (_searchController.text.isNotEmpty)

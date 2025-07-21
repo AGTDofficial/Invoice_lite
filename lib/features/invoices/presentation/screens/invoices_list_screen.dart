@@ -4,10 +4,12 @@ import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 import 'package:invoice_lite/core/routes/app_router.dart';
 
-import 'package:invoice_lite/features/invoices/domain/invoice_model.dart';
+import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
 import 'package:invoice_lite/features/invoices/data/invoice_dao.dart';
 import 'package:invoice_lite/features/invoices/presentation/screens/add_edit_invoice_screen.dart';
 import 'package:invoice_lite/core/theme/app_colors.dart';
+
+import '../../../../core/database/database.dart';
 
 class InvoicesListScreen extends ConsumerStatefulWidget {
   static const String routeName = '/invoices';

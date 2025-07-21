@@ -8,6 +8,8 @@ import 'package:invoice_lite/features/invoices/data/invoice_model.dart';
 import 'package:invoice_lite/features/customers/data/customer_model.dart';
 import 'package:invoice_lite/features/items/data/item_model.dart';
 
+import '../../../core/database/database.dart';
+
 class PdfInvoiceService {
   static final PdfInvoiceService _instance = PdfInvoiceService._internal();
   factory PdfInvoiceService() => _instance;
@@ -87,7 +89,7 @@ class PdfInvoiceService {
           padding: const pw.EdgeInsets.all(16),
           decoration: pw.BoxDecoration(
             border: pw.Border.all(color: PdfColors.grey300),
-            borderRadius: 6,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
@@ -125,11 +127,19 @@ class PdfInvoiceService {
         ),
         pw.SizedBox(height: 8),
         pw.Text(customer.name, style: const pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-        if (customer.companyName != null) pw.Text(customer.companyName!),
+        if (customer.email != null) pw.Text(customer.email!),
+        if (customer.phone != null) pw.Text(customer.phone!),
         if (customer.address != null) pw.Text(customer.address!),
-        if (customer.city != null) pw.Text('${customer.city}${customer.state != null ? ', ${customer.state}' : ''}'),
-        if (customer.pinCode != null) pw.Text('PIN: ${customer.pinCode}'),
-        if (customer.gstin != null) pw.Text('GSTIN: ${customer.gstin}'),
+        if (customer.city != null) 
+          pw.Text([
+            customer.city,
+            if (customer.state != null) ', ${customer.state}',
+            if (customer.country != null) ', ${customer.country}',
+          ].join()),
+        if (customer.pinCode?.isNotEmpty ?? false) 
+          pw.Text('PIN: ${customer.pinCode}'),
+        if (customer.taxId?.isNotEmpty ?? false) 
+          pw.Text('GSTIN: ${customer.taxId}'),
       ],
     );
   }
